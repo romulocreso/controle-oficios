@@ -1,5 +1,8 @@
 const APP_CONFIG = window.APP_CONFIG || {};
-const supabase = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(
+  APP_CONFIG.SUPABASE_URL,
+  APP_CONFIG.SUPABASE_ANON_KEY
+);
 
 let allRows = [];
 let currentUser = null;
@@ -119,11 +122,19 @@ function getFilteredRows() {
   const respondido = els.respondidoFilter.value;
 
   return allRows.filter(row => {
-    const hay = [row.numero_oficio, row.unidade, row.classe, row.observacoes, row.origem_arquivo].join(' ').toLowerCase();
+    const hay = [
+      row.numero_oficio,
+      row.unidade,
+      row.classe,
+      row.observacoes,
+      row.origem_arquivo
+    ].join(' ').toLowerCase();
+
     const matchesText = !q || hay.includes(q);
     const matchesStatus = !status || row.status_prazo_calculado === status;
     const matchesRecebido = !recebido || normalizeText(row.recebido) === recebido;
     const matchesRespondido = !respondido || normalizeText(row.respondido) === respondido;
+
     return matchesText && matchesStatus && matchesRecebido && matchesRespondido;
   });
 }
@@ -164,8 +175,8 @@ function renderTable(rows) {
       <td>${escapeHtml(row.origem_arquivo || '')}</td>
       <td>
         <div class="row-actions">
-          <button class="secondary" onclick="editRow('${row.id}')">Editar</button>
-          <button class="danger" onclick="deleteRow('${row.id}')">Excluir</button>
+          <button type="button" class="secondary" onclick="editRow('${row.id}')">Editar</button>
+          <button type="button" class="danger" onclick="deleteRow('${row.id}')">Excluir</button>
         </div>
       </td>
     </tr>
@@ -179,7 +190,7 @@ function render() {
 }
 
 async function loadRows() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('oficios')
     .select('*')
     .order('created_at', { ascending: false });
@@ -202,7 +213,9 @@ function formData() {
     classe: document.getElementById('classe').value.trim(),
     recebido: document.getElementById('recebido').value || null,
     data_recebimento: document.getElementById('data_recebimento').value || null,
-    prazo_resposta_dias: document.getElementById('prazo_resposta_dias').value ? Number(document.getElementById('prazo_resposta_dias').value) : null,
+    prazo_resposta_dias: document.getElementById('prazo_resposta_dias').value
+      ? Number(document.getElementById('prazo_resposta_dias').value)
+      : null,
     data_limite_resposta: document.getElementById('data_limite_resposta').value || null,
     respondido: document.getElementById('respondido').value || null,
     data_resposta: document.getElementById('data_resposta').value || null,
@@ -237,13 +250,21 @@ function fillForm(row) {
 window.editRow = function(id) {
   const row = allRows.find(r => r.id === id);
   if (row) fillForm(row);
-}
+};
 
 window.deleteRow = async function(id) {
-  if (!currentUser) return showToast('Faça login para excluir.');
+  if (!currentUser) {
+    showToast('Faça login para excluir.');
+    return;
+  }
+
   if (!confirm('Deseja excluir este registro?')) return;
 
-  const { error } = await supabase.from('oficios').delete().eq('id', id);
+  const { error } = await supabaseClient
+    .from('oficios')
+    .delete()
+    .eq('id', id);
+
   if (error) {
     showToast('Erro ao excluir registro.');
     console.error(error);
@@ -252,21 +273,37 @@ window.deleteRow = async function(id) {
 
   showToast('Registro excluído.');
   await loadRows();
-}
+};
 
 async function saveRecord() {
-  if (!currentUser) return showToast('Faça login para salvar.');
+  if (!currentUser) {
+    showToast('Faça login para salvar.');
+    return;
+  }
 
   const payload = formData();
-  if (!payload.numero_oficio) return showToast('Informe o número do ofício.');
+
+  if (!payload.numero_oficio) {
+    showToast('Informe o número do ofício.');
+    return;
+  }
 
   const id = els.recordId.value;
   let result;
 
   if (id) {
-    result = await supabase.from('oficios').update(payload).eq('id', id).select().single();
+    result = await supabaseClient
+      .from('oficios')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
   } else {
-    result = await supabase.from('oficios').insert(payload).select().single();
+    result = await supabaseClient
+      .from('oficios')
+      .insert(payload)
+      .select()
+      .single();
   }
 
   if (result.error) {
@@ -283,9 +320,17 @@ async function saveRecord() {
 async function login() {
   const email = els.loginEmail.value.trim();
   const password = els.loginPassword.value;
-  if (!email || !password) return showToast('Informe email e senha.');
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (!email || !password) {
+    showToast('Informe email e senha.');
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
   if (error) {
     showToast('Não foi possível entrar.');
     console.error(error);
@@ -296,13 +341,14 @@ async function login() {
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   showToast('Sessão encerrada.');
 }
 
 async function refreshSession() {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await supabaseClient.auth.getUser();
   currentUser = data.user || null;
+
   els.logoutBtn.classList.toggle('hidden', !currentUser);
   els.showLoginBtn.classList.toggle('hidden', !!currentUser);
   els.loginSection.classList.toggle('hidden', !!currentUser);
@@ -311,9 +357,21 @@ async function refreshSession() {
 function exportFilteredCsv() {
   const rows = getFilteredRows();
   const headers = [
-    'id','numero_oficio','unidade','classe','recebido','data_recebimento','prazo_resposta_dias',
-    'data_limite_resposta','respondido','data_resposta','observacoes','origem_arquivo','status_prazo_calculado'
+    'id',
+    'numero_oficio',
+    'unidade',
+    'classe',
+    'recebido',
+    'data_recebimento',
+    'prazo_resposta_dias',
+    'data_limite_resposta',
+    'respondido',
+    'data_resposta',
+    'observacoes',
+    'origem_arquivo',
+    'status_prazo_calculado'
   ];
+
   const csv = [
     headers.join(','),
     ...rows.map(row => headers.map(h => csvEscape(row[h] ?? '')).join(','))
@@ -343,9 +401,11 @@ els.refreshBtn.addEventListener('click', loadRows);
 els.exportBtn.addEventListener('click', exportFilteredCsv);
 els.loginBtn.addEventListener('click', login);
 els.logoutBtn.addEventListener('click', logout);
-els.showLoginBtn.addEventListener('click', () => els.loginSection.classList.toggle('hidden'));
+els.showLoginBtn.addEventListener('click', () => {
+  els.loginSection.classList.toggle('hidden');
+});
 
-supabase.auth.onAuthStateChange(async () => {
+supabaseClient.auth.onAuthStateChange(async () => {
   await refreshSession();
   await loadRows();
 });
