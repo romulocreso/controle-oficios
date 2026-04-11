@@ -3,35 +3,159 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel de Conferência de Ofícios</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Controle de Ofícios</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <header class="hero">
-    <h1>Painel de Conferência de Ofícios</h1>
-    <p>Base carregada por CSV para alimentação mecânica e conferência humana.</p>
+  <header class="topbar">
+    <div>
+      <h1>Controle de Ofícios</h1>
+      <p class="subtitle">Cadastro, conferência humana e controle de prazo</p>
+    </div>
+    <div class="topbar-actions">
+      <button id="showLoginBtn" class="secondary">Entrar</button>
+      <button id="logoutBtn" class="secondary hidden">Sair</button>
+    </div>
   </header>
 
-  <main class="container">
-    <section class="card">
-      <div class="toolbar">
-        <input type="text" id="searchInput" placeholder="Buscar por número, unidade, classe ou observação" />
-        <select id="statusFilter">
-          <option value="">Todos os status</option>
-        </select>
-        <select id="recebidoFilter">
-          <option value="">Recebimento: todos</option>
-          <option value="SIM">Recebido</option>
-          <option value="NAO">Não recebido</option>
-          <option value="PENDENTE">Pendente</option>
-        </select>
-        <button id="reloadBtn">Recarregar CSV</button>
-        <button id="exportBtn">Exportar visão filtrada</button>
+  <main class="page">
+    <section id="loginSection" class="panel hidden">
+      <h2>Acesso</h2>
+      <div class="grid two">
+        <label>
+          <span>Email</span>
+          <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
+        </label>
+        <label>
+          <span>Senha</span>
+          <input type="password" id="loginPassword" placeholder="********" />
+        </label>
       </div>
-      <div class="stats" id="stats"></div>
+      <div class="actions">
+        <button id="loginBtn">Entrar</button>
+      </div>
     </section>
 
-    <section class="card">
+    <section class="panel">
+      <div class="section-head">
+        <h2>Novo / Editar Ofício</h2>
+        <span id="editingBadge" class="badge neutral hidden">Editando registro</span>
+      </div>
+
+      <form id="oficioForm" class="grid three">
+        <input type="hidden" id="recordId" />
+
+        <label>
+          <span>Número do ofício</span>
+          <input type="text" id="numero_oficio" required />
+        </label>
+
+        <label>
+          <span>Unidade</span>
+          <input type="text" id="unidade" />
+        </label>
+
+        <label>
+          <span>Classe</span>
+          <input type="text" id="classe" />
+        </label>
+
+        <label>
+          <span>Recebido</span>
+          <select id="recebido">
+            <option value="">Selecione</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Data de recebimento</span>
+          <input type="date" id="data_recebimento" />
+        </label>
+
+        <label>
+          <span>Prazo para resposta (dias)</span>
+          <input type="number" min="0" id="prazo_resposta_dias" />
+        </label>
+
+        <label>
+          <span>Data limite</span>
+          <input type="date" id="data_limite_resposta" />
+        </label>
+
+        <label>
+          <span>Respondido</span>
+          <select id="respondido">
+            <option value="">Selecione</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Data da resposta</span>
+          <input type="date" id="data_resposta" />
+        </label>
+
+        <label class="full">
+          <span>Observações</span>
+          <textarea id="observacoes" rows="3"></textarea>
+        </label>
+
+        <label>
+          <span>Origem</span>
+          <input type="text" id="origem_arquivo" placeholder="ex.: protocolo interno" />
+        </label>
+      </form>
+
+      <div class="actions">
+        <button id="saveBtn">Salvar</button>
+        <button id="clearBtn" class="secondary">Limpar</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h2>Filtros e conferência</h2>
+        <div class="actions inline">
+          <button id="refreshBtn" class="secondary">Atualizar</button>
+          <button id="exportBtn" class="secondary">Exportar CSV</button>
+        </div>
+      </div>
+
+      <div class="grid four">
+        <label>
+          <span>Busca</span>
+          <input type="text" id="searchInput" placeholder="número, unidade, classe, observações" />
+        </label>
+        <label>
+          <span>Status</span>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+          </select>
+        </label>
+        <label>
+          <span>Recebido</span>
+          <select id="recebidoFilter">
+            <option value="">Todos</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
+        <label>
+          <span>Respondido</span>
+          <select id="respondidoFilter">
+            <option value="">Todos</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="stats" class="stats"></div>
+
       <div class="table-wrap">
         <table id="oficiosTable">
           <thead>
@@ -40,13 +164,14 @@
               <th>Unidade</th>
               <th>Classe</th>
               <th>Recebido</th>
-              <th>Data recebimento</th>
-              <th>Prazo (dias)</th>
+              <th>Recebimento</th>
+              <th>Prazo</th>
               <th>Data limite</th>
               <th>Respondido</th>
-              <th>Status prazo</th>
+              <th>Status</th>
               <th>Observações</th>
               <th>Origem</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -55,6 +180,9 @@
     </section>
   </main>
 
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

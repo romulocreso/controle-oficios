@@ -1,41 +1,36 @@
-# Painel de Ofícios para GitHub Pages
+# Controle de Ofícios
 
-Este pacote já vem com:
-- `index.html`: página principal
-- `styles.css`: estilos
-- `app.js`: lógica da interface
-- `data/oficios_unificados.csv`: base de dados inicial
-- `schema_exemplo.csv`: modelo vazio para novas cargas
+Arquivos prontos para GitHub Pages + Supabase.
 
-## Como usar
-1. Crie um repositório no GitHub.
-2. Envie todos estes arquivos.
-3. Ative o GitHub Pages em **Settings > Pages** usando a branch `main`.
-4. A página ficará disponível na URL do repositório.
+## 1. Rodar o SQL
+No Supabase, abra `SQL Editor` e execute o arquivo `supabase_schema.sql`.
 
-## Como alimentar de forma mecânica
-Substitua o arquivo `data/oficios_unificados.csv` por uma nova versão, mantendo as mesmas colunas.
+## 2. Criar usuário
+No Supabase, vá em `Authentication > Users` e crie um usuário com email e senha.
 
-Campos principais:
-- `numero_oficio`
-- `unidade`
-- `classe`
-- `recebido` → SIM / NAO / PENDENTE
-- `data_recebimento` → formato `YYYY-MM-DD`
-- `prazo_resposta_dias` → número inteiro
-- `data_limite_resposta` → pode ficar em branco se quiser cálculo automático
-- `respondido` → SIM / NAO / PENDENTE
-- `data_resposta` → formato `YYYY-MM-DD`
-- `observacoes`
+## 3. Subir no GitHub
+Envie para a raiz do repositório:
+- index.html
+- style.css
+- app.js
+- config.js
+- supabase_schema.sql
+- README.md
 
-## Regras da página
-- Se houver `data_limite_resposta`, ela prevalece.
-- Se `data_limite_resposta` estiver vazia e houver `data_recebimento` + `prazo_resposta_dias`, a página calcula a data limite.
-- `status_prazo` é calculado automaticamente:
-  - `RESPONDIDO`
-  - `NO PRAZO`
-  - `VENCE HOJE`
-  - `VENCIDO`
-  - `SEM PRAZO`
-  - `NÃO RECEBIDO`
-  - `PENDENTE DE DADOS`
+## 4. Ativar o GitHub Pages
+No GitHub:
+- Settings
+- Pages
+- Source: Deploy from a branch
+- Branch: main
+- Folder: /(root)
+
+## 5. Acessar
+A URL deve ficar parecida com:
+`https://SEUUSUARIO.github.io/controle-oficios/`
+
+## Observação importante
+O login só funciona depois que:
+- a tabela existir no Supabase
+- houver um usuário criado no Auth
+- o `config.js` estiver com URL e chave corretas
