@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Conferência de Ofícios</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>Painel de Conferência de Ofícios</h1>
+    <p>Base carregada por CSV para alimentação mecânica e conferência humana.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Buscar por número, unidade, classe ou observação" />
+        <select id="statusFilter">
+          <option value="">Todos os status</option>
+        </select>
+        <select id="recebidoFilter">
+          <option value="">Recebimento: todos</option>
+          <option value="SIM">Recebido</option>
+          <option value="NAO">Não recebido</option>
+          <option value="PENDENTE">Pendente</option>
+        </select>
+        <button id="reloadBtn">Recarregar CSV</button>
+        <button id="exportBtn">Exportar visão filtrada</button>
+      </div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table id="oficiosTable">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Unidade</th>
+              <th>Classe</th>
+              <th>Recebido</th>
+              <th>Data recebimento</th>
+              <th>Prazo (dias)</th>
+              <th>Data limite</th>
+              <th>Respondido</th>
+              <th>Status prazo</th>
+              <th>Observações</th>
+              <th>Origem</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
