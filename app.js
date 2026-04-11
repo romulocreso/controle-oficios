@@ -19,6 +19,8 @@ const els = {
   clearBtn: document.getElementById('clearBtn'),
   refreshBtn: document.getElementById('refreshBtn'),
   exportBtn: document.getElementById('exportBtn'),
+  importBtn: document.getElementById('importBtn'),
+  csvFileInput: document.getElementById('csvFileInput'),
   searchInput: document.getElementById('searchInput'),
   statusFilter: document.getElementById('statusFilter'),
   recebidoFilter: document.getElementById('recebidoFilter'),
@@ -27,7 +29,15 @@ const els = {
   stats: document.getElementById('stats'),
   toast: document.getElementById('toast'),
   recordId: document.getElementById('recordId'),
-  editingBadge: document.getElementById('editingBadge')
+  editingBadge: document.getElementById('editingBadge'),
+  numeroOficio: document.getElementById('numero_oficio'),
+  recebido: document.getElementById('recebido'),
+  dataRecebimento: document.getElementById('data_recebimento'),
+  prazoDias: document.getElementById('prazo_resposta_dias'),
+  dataLimite: document.getElementById('data_limite_resposta'),
+  respondido: document.getElementById('respondido'),
+  dataResposta: document.getElementById('data_resposta'),
+  observacoes: document.getElementById('observacoes')
 };
 
 function showToast(message) {
@@ -124,10 +134,7 @@ function getFilteredRows() {
   return allRows.filter(row => {
     const hay = [
       row.numero_oficio,
-      row.unidade,
-      row.classe,
-      row.observacoes,
-      row.origem_arquivo
+      row.observacoes
     ].join(' ').toLowerCase();
 
     const matchesText = !q || hay.includes(q);
@@ -162,9 +169,7 @@ function renderStats(rows) {
 function renderTable(rows) {
   els.tableBody.innerHTML = rows.map(row => `
     <tr>
-      <td>${escapeHtml(row.numero_oficio)}</td>
-      <td>${escapeHtml(row.unidade || '')}</td>
-      <td>${escapeHtml(row.classe || '')}</td>
+      <td>${escapeHtml(row.numero_oficio || '')}</td>
       <td>${escapeHtml(row.recebido || '')}</td>
       <td>${escapeHtml(formatDate(row.data_recebimento))}</td>
       <td>${escapeHtml(row.prazo_resposta_dias || '')}</td>
@@ -172,7 +177,6 @@ function renderTable(rows) {
       <td>${escapeHtml(row.respondido || '')}</td>
       <td>${badge(row.status_prazo_calculado)}</td>
       <td>${escapeHtml(row.observacoes || '')}</td>
-      <td>${escapeHtml(row.origem_arquivo || '')}</td>
       <td>
         <div class="row-actions">
           <button type="button" class="secondary" onclick="editRow('${row.id}')">Editar</button>
@@ -206,21 +210,39 @@ async function loadRows() {
   render();
 }
 
+function autoFillDeadline() {
+  const dataRecebimento = els.dataRecebimento.value;
+  const prazo = Number(els.prazoDias.value || 0);
+
+  if (!dataRecebimento || !(prazo > 0)) return;
+
+  const base = parseDate(dataRecebimento);
+  if (!base) return;
+
+  const limite = addDays(base, prazo).toISOString().slice(0, 10);
+  els.dataLimite.value = limite;
+}
+
 function formData() {
+  let dataLimite = els.dataLimite.value || null;
+
+  if (!dataLimite && els.dataRecebimento.value && els.prazoDias.value) {
+    const base = parseDate(els.dataRecebimento.value);
+    const prazo = Number(els.prazoDias.value || 0);
+    if (base && prazo > 0) {
+      dataLimite = addDays(base, prazo).toISOString().slice(0, 10);
+    }
+  }
+
   return {
-    numero_oficio: document.getElementById('numero_oficio').value.trim(),
-    unidade: document.getElementById('unidade').value.trim(),
-    classe: document.getElementById('classe').value.trim(),
-    recebido: document.getElementById('recebido').value || null,
-    data_recebimento: document.getElementById('data_recebimento').value || null,
-    prazo_resposta_dias: document.getElementById('prazo_resposta_dias').value
-      ? Number(document.getElementById('prazo_resposta_dias').value)
-      : null,
-    data_limite_resposta: document.getElementById('data_limite_resposta').value || null,
-    respondido: document.getElementById('respondido').value || null,
-    data_resposta: document.getElementById('data_resposta').value || null,
-    observacoes: document.getElementById('observacoes').value.trim(),
-    origem_arquivo: document.getElementById('origem_arquivo').value.trim(),
+    numero_oficio: els.numeroOficio.value.trim(),
+    recebido: els.recebido.value || null,
+    data_recebimento: els.dataRecebimento.value || null,
+    prazo_resposta_dias: els.prazoDias.value ? Number(els.prazoDias.value) : null,
+    data_limite_resposta: dataLimite,
+    respondido: els.respondido.value || null,
+    data_resposta: els.dataResposta.value || null,
+    observacoes: els.observacoes.value.trim(),
   };
 }
 
@@ -232,17 +254,14 @@ function resetForm() {
 
 function fillForm(row) {
   els.recordId.value = row.id;
-  document.getElementById('numero_oficio').value = row.numero_oficio || '';
-  document.getElementById('unidade').value = row.unidade || '';
-  document.getElementById('classe').value = row.classe || '';
-  document.getElementById('recebido').value = row.recebido || '';
-  document.getElementById('data_recebimento').value = row.data_recebimento || '';
-  document.getElementById('prazo_resposta_dias').value = row.prazo_resposta_dias ?? '';
-  document.getElementById('data_limite_resposta').value = row.data_limite_resposta || '';
-  document.getElementById('respondido').value = row.respondido || '';
-  document.getElementById('data_resposta').value = row.data_resposta || '';
-  document.getElementById('observacoes').value = row.observacoes || '';
-  document.getElementById('origem_arquivo').value = row.origem_arquivo || '';
+  els.numeroOficio.value = row.numero_oficio || '';
+  els.recebido.value = row.recebido || '';
+  els.dataRecebimento.value = row.data_recebimento || '';
+  els.prazoDias.value = row.prazo_resposta_dias ?? '';
+  els.dataLimite.value = row.data_limite_resposta || '';
+  els.respondido.value = row.respondido || '';
+  els.dataResposta.value = row.data_resposta || '';
+  els.observacoes.value = row.observacoes || '';
   els.editingBadge.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -288,8 +307,8 @@ async function saveRecord() {
     return;
   }
 
-  const id = els.recordId.value;
   let result;
+  const id = els.recordId.value;
 
   if (id) {
     result = await supabaseClient
@@ -354,13 +373,16 @@ async function refreshSession() {
   els.loginSection.classList.toggle('hidden', !!currentUser);
 }
 
+function csvEscape(value) {
+  const s = String(value);
+  return /[",\n]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
+}
+
 function exportFilteredCsv() {
   const rows = getFilteredRows();
   const headers = [
     'id',
     'numero_oficio',
-    'unidade',
-    'classe',
     'recebido',
     'data_recebimento',
     'prazo_resposta_dias',
@@ -368,7 +390,6 @@ function exportFilteredCsv() {
     'respondido',
     'data_resposta',
     'observacoes',
-    'origem_arquivo',
     'status_prazo_calculado'
   ];
 
@@ -386,9 +407,220 @@ function exportFilteredCsv() {
   URL.revokeObjectURL(url);
 }
 
-function csvEscape(value) {
-  const s = String(value);
-  return /[",\n]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
+function normalizeHeader(value) {
+  return (value || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function csvToObjects(text) {
+  const rows = [];
+  let row = [];
+  let value = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && next === '"') {
+        value += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      row.push(value);
+      value = '';
+    } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+      if (char === '\r' && next === '\n') i++;
+      if (value !== '' || row.length) {
+        row.push(value);
+        rows.push(row);
+        row = [];
+        value = '';
+      }
+    } else {
+      value += char;
+    }
+  }
+
+  if (value !== '' || row.length) {
+    row.push(value);
+    rows.push(row);
+  }
+
+  if (!rows.length) return [];
+
+  const headers = rows.shift().map(h => normalizeHeader(h.replace(/^\uFEFF/, '')));
+
+  return rows
+    .filter(cols => cols.some(c => String(c || '').trim() !== ''))
+    .map(cols => {
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = (cols[idx] || '').trim();
+      });
+      return obj;
+    });
+}
+
+function pickValue(row, aliases) {
+  for (const alias of aliases) {
+    const key = normalizeHeader(alias);
+    if (row[key] !== undefined && row[key] !== '') {
+      return row[key];
+    }
+  }
+  return '';
+}
+
+function normalizeDateToISO(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+  const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) {
+    const [, dd, mm, yyyy] = br;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return raw;
+}
+
+function normalizeImportedRow(row) {
+  return {
+    numero_oficio: pickValue(row, [
+      'numero_oficio',
+      'numero do oficio',
+      'número do ofício',
+      'numero',
+      'número',
+      'oficio',
+      'ofício',
+      'n_oficio'
+    ]) || null,
+
+    recebido: normalizeText(pickValue(row, [
+      'recebido'
+    ])) || null,
+
+    data_recebimento: normalizeDateToISO(pickValue(row, [
+      'data_recebimento',
+      'recebimento',
+      'data de recebimento'
+    ])) || null,
+
+    prazo_resposta_dias: (() => {
+      const v = pickValue(row, [
+        'prazo_resposta_dias',
+        'prazo',
+        'prazo dias',
+        'dias'
+      ]);
+      return v ? Number(String(v).replace(/[^\d-]/g, '')) : null;
+    })(),
+
+    data_limite_resposta: normalizeDateToISO(pickValue(row, [
+      'data_limite_resposta',
+      'data_limite',
+      'data limite'
+    ])) || null,
+
+    respondido: normalizeText(pickValue(row, [
+      'respondido'
+    ])) || null,
+
+    data_resposta: normalizeDateToISO(pickValue(row, [
+      'data_resposta',
+      'resposta',
+      'data da resposta'
+    ])) || null,
+
+    observacoes: pickValue(row, [
+      'observacoes',
+      'observação',
+      'observacao',
+      'observações',
+      'obs'
+    ]) || null,
+  };
+}
+
+function cleanImportedPayload(row) {
+  const payload = {
+    numero_oficio: row.numero_oficio || null,
+    recebido: row.recebido || null,
+    data_recebimento: row.data_recebimento || null,
+    prazo_resposta_dias: Number.isFinite(row.prazo_resposta_dias) ? row.prazo_resposta_dias : null,
+    data_limite_resposta: row.data_limite_resposta || null,
+    respondido: row.respondido || null,
+    data_resposta: row.data_resposta || null,
+    observacoes: row.observacoes || null,
+  };
+
+  if (!payload.data_limite_resposta && payload.data_recebimento && payload.prazo_resposta_dias > 0) {
+    const base = parseDate(payload.data_recebimento);
+    if (base) {
+      payload.data_limite_resposta = addDays(base, payload.prazo_resposta_dias)
+        .toISOString()
+        .slice(0, 10);
+    }
+  }
+
+  return payload;
+}
+
+async function importCsvFile(file) {
+  if (!currentUser) {
+    showToast('Faça login para importar.');
+    return;
+  }
+
+  const text = await file.text();
+  const parsedRows = csvToObjects(text);
+
+  if (!parsedRows.length) {
+    showToast('CSV vazio ou inválido.');
+    return;
+  }
+
+  const payloads = parsedRows
+    .map(normalizeImportedRow)
+    .map(cleanImportedPayload)
+    .filter(row =>
+      row.numero_oficio ||
+      row.data_recebimento ||
+      row.prazo_resposta_dias ||
+      row.data_limite_resposta ||
+      row.observacoes
+    );
+
+  if (!payloads.length) {
+    showToast('Nenhum dado aproveitável encontrado no CSV.');
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('oficios')
+    .insert(payloads);
+
+  if (error) {
+    showToast('Erro ao importar CSV.');
+    console.error(error);
+    return;
+  }
+
+  showToast(`${payloads.length} registro(s) importado(s).`);
+  await loadRows();
 }
 
 els.searchInput.addEventListener('input', render);
@@ -404,6 +636,17 @@ els.logoutBtn.addEventListener('click', logout);
 els.showLoginBtn.addEventListener('click', () => {
   els.loginSection.classList.toggle('hidden');
 });
+els.importBtn.addEventListener('click', () => {
+  els.csvFileInput.click();
+});
+els.csvFileInput.addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  await importCsvFile(file);
+  event.target.value = '';
+});
+els.dataRecebimento.addEventListener('change', autoFillDeadline);
+els.prazoDias.addEventListener('input', autoFillDeadline);
 
 supabaseClient.auth.onAuthStateChange(async () => {
   await refreshSession();
