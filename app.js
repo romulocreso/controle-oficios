@@ -345,7 +345,7 @@ async function login() {
     return;
   }
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
     email,
     password
   });
@@ -356,6 +356,9 @@ async function login() {
     return;
   }
 
+  currentUser = data.user || null;
+  await refreshSession();
+  await loadRows();
   showToast('Login realizado.');
 }
 
