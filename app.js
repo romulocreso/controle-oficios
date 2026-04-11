@@ -629,11 +629,8 @@ els.searchInput.addEventListener('input', render);
 els.statusFilter.addEventListener('change', render);
 els.recebidoFilter.addEventListener('change', render);
 els.respondidoFilter.addEventListener('change', render);
-els.saveBtn.addEventListener('click', saveRecord);
-els.clearBtn.addEventListener('click', resetForm);
 els.refreshBtn.addEventListener('click', loadRows);
 els.exportBtn.addEventListener('click', exportFilteredCsv);
-els.loginBtn.addEventListener('click', login);
 els.logoutBtn.addEventListener('click', logout);
 els.showLoginBtn.addEventListener('click', () => {
   els.loginSection.classList.toggle('hidden');
@@ -649,6 +646,10 @@ els.csvFileInput.addEventListener('change', async (event) => {
 });
 els.dataRecebimento.addEventListener('change', autoFillDeadline);
 els.prazoDias.addEventListener('input', autoFillDeadline);
+
+window.login = login;
+window.saveRecord = saveRecord;
+window.resetForm = resetForm;
 
 supabaseClient.auth.onAuthStateChange(async () => {
   console.log('[onAuthStateChange]');
