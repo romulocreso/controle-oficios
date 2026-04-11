@@ -11,16 +11,8 @@ const els = {
   loginSection: document.getElementById('loginSection'),
   showLoginBtn: document.getElementById('showLoginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
-  loginBtn: document.getElementById('loginBtn'),
   loginEmail: document.getElementById('loginEmail'),
   loginPassword: document.getElementById('loginPassword'),
-  form: document.getElementById('oficioForm'),
-  saveBtn: document.getElementById('saveBtn'),
-  clearBtn: document.getElementById('clearBtn'),
-  refreshBtn: document.getElementById('refreshBtn'),
-  exportBtn: document.getElementById('exportBtn'),
-  importBtn: document.getElementById('importBtn'),
-  csvFileInput: document.getElementById('csvFileInput'),
   searchInput: document.getElementById('searchInput'),
   statusFilter: document.getElementById('statusFilter'),
   recebidoFilter: document.getElementById('recebidoFilter'),
@@ -30,6 +22,9 @@ const els = {
   toast: document.getElementById('toast'),
   recordId: document.getElementById('recordId'),
   editingBadge: document.getElementById('editingBadge'),
+  form: document.getElementById('oficioForm'),
+  csvFileInput: document.getElementById('csvFileInput'),
+
   numeroOficio: document.getElementById('numero_oficio'),
   recebido: document.getElementById('recebido'),
   dataRecebimento: document.getElementById('data_recebimento'),
@@ -45,7 +40,7 @@ function showToast(message) {
   els.toast.textContent = message;
   els.toast.classList.remove('hidden');
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 4000);
+  showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 5000);
 }
 
 function normalizeText(v) {
@@ -191,17 +186,19 @@ function render() {
 }
 
 async function loadRows() {
+  console.log('[loadRows] início');
   const { data, error } = await supabaseClient
     .from('oficios')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
-    showToast('Erro ao carregar registros.');
-    console.error('[loadRows]', error);
+    showToast(`Erro ao carregar: ${error.message}`);
+    console.error('[loadRows] error', error);
     return;
   }
 
+  console.log('[loadRows] data', data);
   allRows = (data || []).map(enrichRow);
   fillStatusFilter(allRows);
   render();
@@ -216,8 +213,7 @@ function autoFillDeadline() {
   const base = parseDate(dataRecebimento);
   if (!base) return;
 
-  const limite = addDays(base, prazo).toISOString().slice(0, 10);
-  els.dataLimite.value = limite;
+  els.dataLimite.value = addDays(base, prazo).toISOString().slice(0, 10);
 }
 
 function formData() {
@@ -232,14 +228,14 @@ function formData() {
   }
 
   return {
-    numero_oficio: els.numeroOficio.value.trim(),
+    numero_oficio: els.numeroOficio.value.trim() || null,
     recebido: els.recebido.value || null,
     data_recebimento: els.dataRecebimento.value || null,
     prazo_resposta_dias: els.prazoDias.value ? Number(els.prazoDias.value) : null,
     data_limite_resposta: dataLimite,
     respondido: els.respondido.value || null,
     data_resposta: els.dataResposta.value || null,
-    observacoes: els.observacoes.value.trim(),
+    observacoes: els.observacoes.value.trim() || null,
   };
 }
 
@@ -269,8 +265,8 @@ window.editRow = function(id) {
 };
 
 window.deleteRow = async function(id) {
-  const { data } = await supabaseClient.auth.getSession();
-  currentUser = data?.session?.user || null;
+  const sessionResult = await supabaseClient.auth.getSession();
+  currentUser = sessionResult?.data?.session?.user || null;
 
   if (!currentUser) {
     showToast('Faça login para excluir.');
@@ -279,13 +275,10 @@ window.deleteRow = async function(id) {
 
   if (!confirm('Deseja excluir este registro?')) return;
 
-  const { error } = await supabaseClient
-    .from('oficios')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabaseClient.from('oficios').delete().eq('id', id);
 
   if (error) {
-    showToast('Erro ao excluir registro.');
+    showToast(`Erro ao excluir: ${error.message}`);
     console.error('[deleteRow]', error);
     return;
   }
@@ -338,7 +331,7 @@ async function saveRecord() {
     console.log('[saveRecord] result', result);
 
     if (result.error) {
-      showToast('Erro ao salvar registro.');
+      showToast(`Erro ao salvar: ${result.error.message}`);
       console.error('[saveRecord] result.error', result.error);
       return;
     }
@@ -347,7 +340,7 @@ async function saveRecord() {
     resetForm();
     await loadRows();
   } catch (err) {
-    showToast('Erro inesperado ao salvar.');
+    showToast(`Erro inesperado ao salvar: ${err.message || err}`);
     console.error('[saveRecord] catch', err);
   }
 }
@@ -372,7 +365,7 @@ async function login() {
     console.log('[login] result', { data, error });
 
     if (error) {
-      showToast('Não foi possível entrar.');
+      showToast(`Erro no login: ${error.message}`);
       console.error('[login]', error);
       return;
     }
@@ -382,7 +375,7 @@ async function login() {
     await loadRows();
     showToast('Login realizado.');
   } catch (err) {
-    showToast('Erro inesperado no login.');
+    showToast(`Erro inesperado no login: ${err.message || err}`);
     console.error('[login] catch', err);
   }
 }
@@ -630,7 +623,7 @@ async function importCsvFile(file) {
   const { error } = await supabaseClient.from('oficios').insert(payloads);
 
   if (error) {
-    showToast('Erro ao importar CSV.');
+    showToast(`Erro ao importar CSV: ${error.message}`);
     console.error('[importCsvFile]', error);
     return;
   }
