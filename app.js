@@ -41,10 +41,11 @@ const els = {
 };
 
 function showToast(message) {
+  console.log('[toast]', message);
   els.toast.textContent = message;
   els.toast.classList.remove('hidden');
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 3000);
+  showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 4000);
 }
 
 function normalizeText(v) {
@@ -133,16 +134,11 @@ function getFilteredRows() {
   const respondido = els.respondidoFilter.value;
 
   return allRows.filter(row => {
-    const hay = [
-      row.numero_oficio,
-      row.observacoes
-    ].join(' ').toLowerCase();
-
+    const hay = [row.numero_oficio, row.observacoes].join(' ').toLowerCase();
     const matchesText = !q || hay.includes(q);
     const matchesStatus = !status || row.status_prazo_calculado === status;
     const matchesRecebido = !recebido || normalizeText(row.recebido) === recebido;
     const matchesRespondido = !respondido || normalizeText(row.respondido) === respondido;
-
     return matchesText && matchesStatus && matchesRecebido && matchesRespondido;
   });
 }
@@ -202,7 +198,7 @@ async function loadRows() {
 
   if (error) {
     showToast('Erro ao carregar registros.');
-    console.error(error);
+    console.error('[loadRows]', error);
     return;
   }
 
@@ -290,7 +286,7 @@ window.deleteRow = async function(id) {
 
   if (error) {
     showToast('Erro ao excluir registro.');
-    console.error(error);
+    console.error('[deleteRow]', error);
     return;
   }
 
@@ -299,8 +295,11 @@ window.deleteRow = async function(id) {
 };
 
 async function saveRecord() {
+  console.log('[saveRecord] clique detectado');
+
   const { data } = await supabaseClient.auth.getUser();
   currentUser = data.user || null;
+  console.log('[saveRecord] currentUser', currentUser);
 
   if (!currentUser) {
     showToast('Faça login para salvar.');
@@ -308,6 +307,7 @@ async function saveRecord() {
   }
 
   const payload = formData();
+  console.log('[saveRecord] payload', payload);
 
   if (!payload.numero_oficio) {
     showToast('Informe o número do ofício.');
@@ -334,7 +334,7 @@ async function saveRecord() {
 
   if (result.error) {
     showToast('Erro ao salvar registro.');
-    console.error(result.error);
+    console.error('[saveRecord]', result.error);
     return;
   }
 
@@ -344,6 +344,8 @@ async function saveRecord() {
 }
 
 async function login() {
+  console.log('[login] clique detectado');
+
   const email = els.loginEmail.value.trim();
   const password = els.loginPassword.value;
 
@@ -359,11 +361,13 @@ async function login() {
 
   if (error) {
     showToast('Não foi possível entrar.');
-    console.error(error);
+    console.error('[login]', error);
     return;
   }
 
   currentUser = data.user || null;
+  console.log('[login] currentUser', currentUser);
+
   await refreshSession();
   await loadRows();
   showToast('Login realizado.');
@@ -379,6 +383,7 @@ async function logout() {
 async function refreshSession() {
   const { data } = await supabaseClient.auth.getUser();
   currentUser = data.user || null;
+  console.log('[refreshSession] currentUser', currentUser);
 
   els.logoutBtn.classList.toggle('hidden', !currentUser);
   els.showLoginBtn.classList.toggle('hidden', !!currentUser);
@@ -520,43 +525,27 @@ function normalizeImportedRow(row) {
       'ofício',
       'n_oficio'
     ]) || null,
-
-    recebido: normalizeText(pickValue(row, [
-      'recebido'
-    ])) || null,
-
+    recebido: normalizeText(pickValue(row, ['recebido'])) || null,
     data_recebimento: normalizeDateToISO(pickValue(row, [
       'data_recebimento',
       'recebimento',
       'data de recebimento'
     ])) || null,
-
     prazo_resposta_dias: (() => {
-      const v = pickValue(row, [
-        'prazo_resposta_dias',
-        'prazo',
-        'prazo dias',
-        'dias'
-      ]);
+      const v = pickValue(row, ['prazo_resposta_dias', 'prazo', 'prazo dias', 'dias']);
       return v ? Number(String(v).replace(/[^\d-]/g, '')) : null;
     })(),
-
     data_limite_resposta: normalizeDateToISO(pickValue(row, [
       'data_limite_resposta',
       'data_limite',
       'data limite'
     ])) || null,
-
-    respondido: normalizeText(pickValue(row, [
-      'respondido'
-    ])) || null,
-
+    respondido: normalizeText(pickValue(row, ['respondido'])) || null,
     data_resposta: normalizeDateToISO(pickValue(row, [
       'data_resposta',
       'resposta',
       'data da resposta'
     ])) || null,
-
     observacoes: pickValue(row, [
       'observacoes',
       'observação',
@@ -624,13 +613,11 @@ async function importCsvFile(file) {
     return;
   }
 
-  const { error } = await supabaseClient
-    .from('oficios')
-    .insert(payloads);
+  const { error } = await supabaseClient.from('oficios').insert(payloads);
 
   if (error) {
     showToast('Erro ao importar CSV.');
-    console.error(error);
+    console.error('[importCsvFile]', error);
     return;
   }
 
@@ -664,11 +651,13 @@ els.dataRecebimento.addEventListener('change', autoFillDeadline);
 els.prazoDias.addEventListener('input', autoFillDeadline);
 
 supabaseClient.auth.onAuthStateChange(async () => {
+  console.log('[onAuthStateChange]');
   await refreshSession();
   await loadRows();
 });
 
 (async function init() {
+  console.log('[init]');
   await refreshSession();
   await loadRows();
 })();
