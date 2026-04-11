@@ -269,8 +269,8 @@ window.editRow = function(id) {
 };
 
 window.deleteRow = async function(id) {
-  const { data } = await supabaseClient.auth.getUser();
-  currentUser = data.user || null;
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data?.session?.user || null;
 
   if (!currentUser) {
     showToast('Faça login para excluir.');
@@ -297,50 +297,59 @@ window.deleteRow = async function(id) {
 async function saveRecord() {
   console.log('[saveRecord] clique detectado');
 
-  const { data } = await supabaseClient.auth.getUser();
-  currentUser = data.user || null;
-  console.log('[saveRecord] currentUser', currentUser);
+  try {
+    const sessionResult = await supabaseClient.auth.getSession();
+    console.log('[saveRecord] sessionResult', sessionResult);
 
-  if (!currentUser) {
-    showToast('Faça login para salvar.');
-    return;
+    currentUser = sessionResult?.data?.session?.user || null;
+    console.log('[saveRecord] currentUser', currentUser);
+
+    if (!currentUser) {
+      showToast('Faça login para salvar.');
+      return;
+    }
+
+    const payload = formData();
+    console.log('[saveRecord] payload', payload);
+
+    if (!payload.numero_oficio) {
+      showToast('Informe o número do ofício.');
+      return;
+    }
+
+    let result;
+    const id = els.recordId.value;
+
+    if (id) {
+      result = await supabaseClient
+        .from('oficios')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+    } else {
+      result = await supabaseClient
+        .from('oficios')
+        .insert(payload)
+        .select()
+        .single();
+    }
+
+    console.log('[saveRecord] result', result);
+
+    if (result.error) {
+      showToast('Erro ao salvar registro.');
+      console.error('[saveRecord] result.error', result.error);
+      return;
+    }
+
+    showToast(id ? 'Registro atualizado.' : 'Registro criado.');
+    resetForm();
+    await loadRows();
+  } catch (err) {
+    showToast('Erro inesperado ao salvar.');
+    console.error('[saveRecord] catch', err);
   }
-
-  const payload = formData();
-  console.log('[saveRecord] payload', payload);
-
-  if (!payload.numero_oficio) {
-    showToast('Informe o número do ofício.');
-    return;
-  }
-
-  let result;
-  const id = els.recordId.value;
-
-  if (id) {
-    result = await supabaseClient
-      .from('oficios')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single();
-  } else {
-    result = await supabaseClient
-      .from('oficios')
-      .insert(payload)
-      .select()
-      .single();
-  }
-
-  if (result.error) {
-    showToast('Erro ao salvar registro.');
-    console.error('[saveRecord]', result.error);
-    return;
-  }
-
-  showToast(id ? 'Registro atualizado.' : 'Registro criado.');
-  resetForm();
-  await loadRows();
 }
 
 async function login() {
@@ -354,23 +363,28 @@ async function login() {
     return;
   }
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
-  if (error) {
-    showToast('Não foi possível entrar.');
-    console.error('[login]', error);
-    return;
+    console.log('[login] result', { data, error });
+
+    if (error) {
+      showToast('Não foi possível entrar.');
+      console.error('[login]', error);
+      return;
+    }
+
+    currentUser = data?.user || data?.session?.user || null;
+    await refreshSession();
+    await loadRows();
+    showToast('Login realizado.');
+  } catch (err) {
+    showToast('Erro inesperado no login.');
+    console.error('[login] catch', err);
   }
-
-  currentUser = data.user || null;
-  console.log('[login] currentUser', currentUser);
-
-  await refreshSession();
-  await loadRows();
-  showToast('Login realizado.');
 }
 
 async function logout() {
@@ -381,8 +395,8 @@ async function logout() {
 }
 
 async function refreshSession() {
-  const { data } = await supabaseClient.auth.getUser();
-  currentUser = data.user || null;
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data?.session?.user || null;
   console.log('[refreshSession] currentUser', currentUser);
 
   els.logoutBtn.classList.toggle('hidden', !currentUser);
@@ -581,8 +595,8 @@ function cleanImportedPayload(row) {
 }
 
 async function importCsvFile(file) {
-  const { data } = await supabaseClient.auth.getUser();
-  currentUser = data.user || null;
+  const sessionResult = await supabaseClient.auth.getSession();
+  currentUser = sessionResult?.data?.session?.user || null;
 
   if (!currentUser) {
     showToast('Faça login para importar.');
