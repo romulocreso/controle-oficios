@@ -120,7 +120,8 @@ function escapeHtml(value) {
 function fillStatusFilter(rows) {
   const current = els.statusFilter.value;
   const statuses = [...new Set(rows.map(r => r.status_prazo_calculado))].sort();
-  els.statusFilter.innerHTML = '<option value="">Todos</option>' +
+  els.statusFilter.innerHTML =
+    '<option value="">Todos</option>' +
     statuses.map(s => `<option value="${s}">${s}</option>`).join('');
   els.statusFilter.value = current;
 }
@@ -272,6 +273,9 @@ window.editRow = function(id) {
 };
 
 window.deleteRow = async function(id) {
+  const { data } = await supabaseClient.auth.getUser();
+  currentUser = data.user || null;
+
   if (!currentUser) {
     showToast('Faça login para excluir.');
     return;
@@ -295,6 +299,9 @@ window.deleteRow = async function(id) {
 };
 
 async function saveRecord() {
+  const { data } = await supabaseClient.auth.getUser();
+  currentUser = data.user || null;
+
   if (!currentUser) {
     showToast('Faça login para salvar.');
     return;
@@ -364,7 +371,9 @@ async function login() {
 
 async function logout() {
   await supabaseClient.auth.signOut();
+  currentUser = null;
   showToast('Sessão encerrada.');
+  await refreshSession();
 }
 
 async function refreshSession() {
@@ -583,6 +592,9 @@ function cleanImportedPayload(row) {
 }
 
 async function importCsvFile(file) {
+  const { data } = await supabaseClient.auth.getUser();
+  currentUser = data.user || null;
+
   if (!currentUser) {
     showToast('Faça login para importar.');
     return;
