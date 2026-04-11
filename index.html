@@ -14,8 +14,8 @@
       <p class="subtitle">Cadastro, conferência humana e controle de prazo</p>
     </div>
     <div class="topbar-actions">
-      <button id="showLoginBtn" class="secondary">Entrar</button>
-      <button id="logoutBtn" class="secondary hidden">Sair</button>
+      <button id="showLoginBtn" type="button" class="secondary">Entrar</button>
+      <button id="logoutBtn" type="button" class="secondary hidden">Sair</button>
     </div>
   </header>
 
@@ -33,7 +33,7 @@
         </label>
       </div>
       <div class="actions">
-        <button id="loginBtn">Entrar</button>
+        <button id="loginBtn" type="button">Entrar</button>
       </div>
     </section>
 
@@ -48,17 +48,7 @@
 
         <label>
           <span>Número do ofício</span>
-          <input type="text" id="numero_oficio" required />
-        </label>
-
-        <label>
-          <span>Unidade</span>
-          <input type="text" id="unidade" />
-        </label>
-
-        <label>
-          <span>Classe</span>
-          <input type="text" id="classe" />
+          <input type="text" id="numero_oficio" />
         </label>
 
         <label>
@@ -103,16 +93,11 @@
           <span>Observações</span>
           <textarea id="observacoes" rows="3"></textarea>
         </label>
-
-        <label>
-          <span>Origem</span>
-          <input type="text" id="origem_arquivo" placeholder="ex.: protocolo interno" />
-        </label>
       </form>
 
       <div class="actions">
-        <button id="saveBtn">Salvar</button>
-        <button id="clearBtn" class="secondary">Limpar</button>
+        <button id="saveBtn" type="button">Salvar</button>
+        <button id="clearBtn" type="button" class="secondary">Limpar</button>
       </div>
     </section>
 
@@ -120,15 +105,17 @@
       <div class="section-head">
         <h2>Filtros e conferência</h2>
         <div class="actions inline">
-          <button id="refreshBtn" class="secondary">Atualizar</button>
-          <button id="exportBtn" class="secondary">Exportar CSV</button>
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
+          <button id="importBtn" type="button" class="secondary">Importar CSV</button>
+          <button id="refreshBtn" type="button" class="secondary">Atualizar</button>
+          <button id="exportBtn" type="button" class="secondary">Exportar CSV</button>
         </div>
       </div>
 
       <div class="grid four">
         <label>
           <span>Busca</span>
-          <input type="text" id="searchInput" placeholder="número, unidade, classe, observações" />
+          <input type="text" id="searchInput" placeholder="número, observações" />
         </label>
         <label>
           <span>Status</span>
@@ -161,8 +148,6 @@
           <thead>
             <tr>
               <th>Número</th>
-              <th>Unidade</th>
-              <th>Classe</th>
               <th>Recebido</th>
               <th>Recebimento</th>
               <th>Prazo</th>
@@ -170,7 +155,6 @@
               <th>Respondido</th>
               <th>Status</th>
               <th>Observações</th>
-              <th>Origem</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -183,6 +167,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
