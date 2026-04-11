@@ -13,6 +13,11 @@ const els = {
   logoutBtn: document.getElementById('logoutBtn'),
   loginEmail: document.getElementById('loginEmail'),
   loginPassword: document.getElementById('loginPassword'),
+  form: document.getElementById('oficioForm'),
+  refreshBtn: document.getElementById('refreshBtn'),
+  exportBtn: document.getElementById('exportBtn'),
+  importBtn: document.getElementById('importBtn'),
+  csvFileInput: document.getElementById('csvFileInput'),
   searchInput: document.getElementById('searchInput'),
   statusFilter: document.getElementById('statusFilter'),
   recebidoFilter: document.getElementById('recebidoFilter'),
@@ -22,9 +27,6 @@ const els = {
   toast: document.getElementById('toast'),
   recordId: document.getElementById('recordId'),
   editingBadge: document.getElementById('editingBadge'),
-  form: document.getElementById('oficioForm'),
-  csvFileInput: document.getElementById('csvFileInput'),
-
   numeroOficio: document.getElementById('numero_oficio'),
   recebido: document.getElementById('recebido'),
   dataRecebimento: document.getElementById('data_recebimento'),
@@ -35,8 +37,13 @@ const els = {
   observacoes: document.getElementById('observacoes')
 };
 
+function bind(el, event, handler) {
+  if (el) el.addEventListener(event, handler);
+}
+
 function showToast(message) {
   console.log('[toast]', message);
+  if (!els.toast) return;
   els.toast.textContent = message;
   els.toast.classList.remove('hidden');
   clearTimeout(showToast.timer);
@@ -101,7 +108,7 @@ function enrichRow(row) {
 }
 
 function badge(status) {
-  return `<span class="badge ${status.replaceAll(' ', '\\ ')}">${status}</span>`;
+  return `<span class="badge ${String(status).replaceAll(' ', '\\ ')}">${status}</span>`;
 }
 
 function escapeHtml(value) {
@@ -114,6 +121,7 @@ function escapeHtml(value) {
 }
 
 function fillStatusFilter(rows) {
+  if (!els.statusFilter) return;
   const current = els.statusFilter.value;
   const statuses = [...new Set(rows.map(r => r.status_prazo_calculado))].sort();
   els.statusFilter.innerHTML =
@@ -123,10 +131,10 @@ function fillStatusFilter(rows) {
 }
 
 function getFilteredRows() {
-  const q = els.searchInput.value.trim().toLowerCase();
-  const status = els.statusFilter.value;
-  const recebido = els.recebidoFilter.value;
-  const respondido = els.respondidoFilter.value;
+  const q = (els.searchInput?.value || '').trim().toLowerCase();
+  const status = els.statusFilter?.value || '';
+  const recebido = els.recebidoFilter?.value || '';
+  const respondido = els.respondidoFilter?.value || '';
 
   return allRows.filter(row => {
     const hay = [row.numero_oficio, row.observacoes].join(' ').toLowerCase();
@@ -139,6 +147,8 @@ function getFilteredRows() {
 }
 
 function renderStats(rows) {
+  if (!els.stats) return;
+
   const stats = {
     total: rows.length,
     recebidos: rows.filter(r => normalizeText(r.recebido) === 'SIM').length,
@@ -159,6 +169,8 @@ function renderStats(rows) {
 }
 
 function renderTable(rows) {
+  if (!els.tableBody) return;
+
   els.tableBody.innerHTML = rows.map(row => `
     <tr>
       <td>${escapeHtml(row.numero_oficio || '')}</td>
@@ -205,6 +217,8 @@ async function loadRows() {
 }
 
 function autoFillDeadline() {
+  if (!els.dataRecebimento || !els.prazoDias || !els.dataLimite) return;
+
   const dataRecebimento = els.dataRecebimento.value;
   const prazo = Number(els.prazoDias.value || 0);
 
@@ -217,9 +231,9 @@ function autoFillDeadline() {
 }
 
 function formData() {
-  let dataLimite = els.dataLimite.value || null;
+  let dataLimite = els.dataLimite?.value || null;
 
-  if (!dataLimite && els.dataRecebimento.value && els.prazoDias.value) {
+  if (!dataLimite && els.dataRecebimento?.value && els.prazoDias?.value) {
     const base = parseDate(els.dataRecebimento.value);
     const prazo = Number(els.prazoDias.value || 0);
     if (base && prazo > 0) {
@@ -228,34 +242,34 @@ function formData() {
   }
 
   return {
-    numero_oficio: els.numeroOficio.value.trim() || null,
-    recebido: els.recebido.value || null,
-    data_recebimento: els.dataRecebimento.value || null,
-    prazo_resposta_dias: els.prazoDias.value ? Number(els.prazoDias.value) : null,
+    numero_oficio: els.numeroOficio?.value.trim() || null,
+    recebido: els.recebido?.value || null,
+    data_recebimento: els.dataRecebimento?.value || null,
+    prazo_resposta_dias: els.prazoDias?.value ? Number(els.prazoDias.value) : null,
     data_limite_resposta: dataLimite,
-    respondido: els.respondido.value || null,
-    data_resposta: els.dataResposta.value || null,
-    observacoes: els.observacoes.value.trim() || null,
+    respondido: els.respondido?.value || null,
+    data_resposta: els.dataResposta?.value || null,
+    observacoes: els.observacoes?.value.trim() || null,
   };
 }
 
 function resetForm() {
-  els.form.reset();
-  els.recordId.value = '';
-  els.editingBadge.classList.add('hidden');
+  if (els.form) els.form.reset();
+  if (els.recordId) els.recordId.value = '';
+  if (els.editingBadge) els.editingBadge.classList.add('hidden');
 }
 
 function fillForm(row) {
-  els.recordId.value = row.id;
-  els.numeroOficio.value = row.numero_oficio || '';
-  els.recebido.value = row.recebido || '';
-  els.dataRecebimento.value = row.data_recebimento || '';
-  els.prazoDias.value = row.prazo_resposta_dias ?? '';
-  els.dataLimite.value = row.data_limite_resposta || '';
-  els.respondido.value = row.respondido || '';
-  els.dataResposta.value = row.data_resposta || '';
-  els.observacoes.value = row.observacoes || '';
-  els.editingBadge.classList.remove('hidden');
+  if (els.recordId) els.recordId.value = row.id;
+  if (els.numeroOficio) els.numeroOficio.value = row.numero_oficio || '';
+  if (els.recebido) els.recebido.value = row.recebido || '';
+  if (els.dataRecebimento) els.dataRecebimento.value = row.data_recebimento || '';
+  if (els.prazoDias) els.prazoDias.value = row.prazo_resposta_dias ?? '';
+  if (els.dataLimite) els.dataLimite.value = row.data_limite_resposta || '';
+  if (els.respondido) els.respondido.value = row.respondido || '';
+  if (els.dataResposta) els.dataResposta.value = row.data_resposta || '';
+  if (els.observacoes) els.observacoes.value = row.observacoes || '';
+  if (els.editingBadge) els.editingBadge.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -311,7 +325,7 @@ async function saveRecord() {
     }
 
     let result;
-    const id = els.recordId.value;
+    const id = els.recordId?.value || '';
 
     if (id) {
       result = await supabaseClient
@@ -348,8 +362,8 @@ async function saveRecord() {
 async function login() {
   console.log('[login] clique detectado');
 
-  const email = els.loginEmail.value.trim();
-  const password = els.loginPassword.value;
+  const email = els.loginEmail?.value.trim() || '';
+  const password = els.loginPassword?.value || '';
 
   if (!email || !password) {
     showToast('Informe email e senha.');
@@ -392,9 +406,9 @@ async function refreshSession() {
   currentUser = data?.session?.user || null;
   console.log('[refreshSession] currentUser', currentUser);
 
-  els.logoutBtn.classList.toggle('hidden', !currentUser);
-  els.showLoginBtn.classList.toggle('hidden', !!currentUser);
-  els.loginSection.classList.toggle('hidden', !!currentUser);
+  if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !currentUser);
+  if (els.showLoginBtn) els.showLoginBtn.classList.toggle('hidden', !!currentUser);
+  if (els.loginSection) els.loginSection.classList.toggle('hidden', !!currentUser);
 }
 
 function csvEscape(value) {
@@ -632,27 +646,27 @@ async function importCsvFile(file) {
   await loadRows();
 }
 
-els.searchInput.addEventListener('input', render);
-els.statusFilter.addEventListener('change', render);
-els.recebidoFilter.addEventListener('change', render);
-els.respondidoFilter.addEventListener('change', render);
-els.refreshBtn.addEventListener('click', loadRows);
-els.exportBtn.addEventListener('click', exportFilteredCsv);
-els.logoutBtn.addEventListener('click', logout);
-els.showLoginBtn.addEventListener('click', () => {
-  els.loginSection.classList.toggle('hidden');
+bind(els.searchInput, 'input', render);
+bind(els.statusFilter, 'change', render);
+bind(els.recebidoFilter, 'change', render);
+bind(els.respondidoFilter, 'change', render);
+bind(els.refreshBtn, 'click', loadRows);
+bind(els.exportBtn, 'click', exportFilteredCsv);
+bind(els.logoutBtn, 'click', logout);
+bind(els.showLoginBtn, 'click', () => {
+  if (els.loginSection) els.loginSection.classList.toggle('hidden');
 });
-els.importBtn.addEventListener('click', () => {
-  els.csvFileInput.click();
+bind(els.importBtn, 'click', () => {
+  els.csvFileInput?.click();
 });
-els.csvFileInput.addEventListener('change', async (event) => {
+bind(els.csvFileInput, 'change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   await importCsvFile(file);
   event.target.value = '';
 });
-els.dataRecebimento.addEventListener('change', autoFillDeadline);
-els.prazoDias.addEventListener('input', autoFillDeadline);
+bind(els.dataRecebimento, 'change', autoFillDeadline);
+bind(els.prazoDias, 'input', autoFillDeadline);
 
 window.login = login;
 window.saveRecord = saveRecord;
