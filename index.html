@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle de Ofícios</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -33,7 +34,7 @@
         </label>
       </div>
       <div class="actions">
-        <button id="loginBtn" type="button">Entrar</button>
+        <button id="loginBtn" type="button" onclick="login()">Entrar</button>
       </div>
     </section>
 
@@ -96,8 +97,8 @@
       </form>
 
       <div class="actions">
-        <button id="saveBtn" type="button">Salvar</button>
-        <button id="clearBtn" type="button" class="secondary">Limpar</button>
+        <button id="saveBtn" type="button" onclick="saveRecord()">Salvar</button>
+        <button id="clearBtn" type="button" class="secondary" onclick="resetForm()">Limpar</button>
       </div>
     </section>
 
@@ -167,6 +168,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
