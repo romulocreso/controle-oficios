@@ -2,7 +2,7 @@
 let allRows = [];
 
 async function loadCsv() {
-  const response = await fetch('./data/oficios_unificados.csv?_=' + Date.now());
+  const response = await fetch('./oficios_unificados.csv?_=' + Date.now());
   const text = await response.text();
   allRows = csvToObjects(text).map(enrichRow);
   fillStatusFilter(allRows);
