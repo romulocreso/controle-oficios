@@ -12,12 +12,8 @@ let isSaving = false;
 let isLoadingRows = false;
 
 const els = {
-  protectedApp: document.getElementById('protectedApp'),
-  loginSection: document.getElementById('loginSection'),
   logoutBtn: document.getElementById('logoutBtn'),
   authStatus: document.getElementById('authStatus'),
-  loginEmail: document.getElementById('loginEmail'),
-  loginPassword: document.getElementById('loginPassword'),
   form: document.getElementById('oficioForm'),
   refreshBtn: document.getElementById('refreshBtn'),
   exportBtn: document.getElementById('exportBtn'),
@@ -251,9 +247,6 @@ async function loadRows(force = false) {
     }
 
     allRows = (result.data || []).map(enrichRow);
-    console.log('[loadRows] total linhas', allRows.length);
-    console.log('[loadRows] amostra', allRows[0]);
-
     fillStatusFilter(allRows);
     render();
   } catch (err) {
@@ -348,8 +341,6 @@ window.deleteRow = async function(id) {
       .delete()
       .eq('id', id);
 
-    console.log('[deleteRow] result', result);
-
     if (result.error) {
       showToast(`Erro ao excluir: ${result.error.message}`);
       console.error('[deleteRow]', result.error);
@@ -365,9 +356,6 @@ window.deleteRow = async function(id) {
 };
 
 async function saveRecord() {
-  console.log('[saveRecord] clique detectado');
-  console.log('[saveRecord] currentUser', currentUser);
-
   if (isSaving) return;
 
   if (!currentUser) {
@@ -376,7 +364,6 @@ async function saveRecord() {
   }
 
   const payload = formData();
-  console.log('[saveRecord] payload', payload);
 
   if (!payload.numero_oficio) {
     showToast('Informe o número do ofício.');
@@ -393,12 +380,10 @@ async function saveRecord() {
         .from('oficios')
         .update(payload)
         .eq('id', els.recordId.value);
-      console.log('[saveRecord] update', result);
     } else {
       result = await supabaseClient
         .from('oficios')
         .insert([payload]);
-      console.log('[saveRecord] insert', result);
     }
 
     if (result.error) {
@@ -418,44 +403,7 @@ async function saveRecord() {
   }
 }
 
-async function login() {
-  console.log('[login] clique detectado');
-
-  const email = els.loginEmail?.value.trim() || '';
-  const password = els.loginPassword?.value || '';
-
-  if (!email || !password) {
-    showToast('Informe email e senha.');
-    return;
-  }
-
-  try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    console.log('[login] result', { data, error });
-
-    if (error) {
-      showToast(`Erro no login: ${error.message}`);
-      console.error('[login]', error);
-      return;
-    }
-
-    currentUser = data?.user || data?.session?.user || null;
-    await applyAuthState();
-    await loadRows(true);
-    showToast('Login realizado.');
-  } catch (err) {
-    showToast(`Erro no login: ${err.message || err}`);
-    console.error('[login] catch', err);
-  }
-}
-
 async function logout() {
-  console.log('[logout] clique detectado');
-
   try {
     const { error } = await supabaseClient.auth.signOut();
 
@@ -465,11 +413,7 @@ async function logout() {
       return;
     }
 
-    currentUser = null;
-    allRows = [];
-    await applyAuthState();
-    render();
-    showToast('Sessão encerrada.');
+    window.location.href = 'login.html';
   } catch (err) {
     showToast(`Erro ao sair: ${err.message || err}`);
     console.error('[logout] catch', err);
@@ -477,16 +421,8 @@ async function logout() {
 }
 
 async function applyAuthState() {
-  console.log('[applyAuthState] currentUser', currentUser);
-
-  const loggedIn = !!currentUser;
-
-  if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !loggedIn);
-  if (els.loginSection) els.loginSection.classList.toggle('hidden', loggedIn);
-  if (els.protectedApp) els.protectedApp.classList.toggle('hidden', !loggedIn);
-
   if (els.authStatus) {
-    els.authStatus.textContent = loggedIn
+    els.authStatus.textContent = currentUser?.email
       ? `Conectado como ${currentUser.email}`
       : 'Não autenticado';
   }
@@ -747,24 +683,32 @@ bind(els.csvFileInput, 'change', async (event) => {
 bind(els.dataRecebimento, 'change', autoFillDeadline);
 bind(els.prazoDias, 'input', autoFillDeadline);
 
-window.login = login;
 window.logout = logout;
 window.saveRecord = saveRecord;
 window.resetForm = resetForm;
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  console.log('[onAuthStateChange]', event, session);
   currentUser = session?.user || null;
+
+  if (!currentUser && event === 'SIGNED_OUT') {
+    window.location.href = 'login.html';
+    return;
+  }
+
   await applyAuthState();
 });
 
 (async function init() {
-  console.log('[init]');
   try {
     const { data } = await supabaseClient.auth.getSession();
     currentUser = data?.session?.user || null;
   } catch (err) {
     console.error('[init] getSession catch', err);
+  }
+
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
   }
 
   await applyAuthState();
