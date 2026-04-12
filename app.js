@@ -15,6 +15,7 @@ const els = {
   loginSection: document.getElementById('loginSection'),
   showLoginBtn: document.getElementById('showLoginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
+  authStatus: document.getElementById('authStatus'),
   loginEmail: document.getElementById('loginEmail'),
   loginPassword: document.getElementById('loginPassword'),
   form: document.getElementById('oficioForm'),
@@ -203,10 +204,7 @@ function render() {
 }
 
 async function loadRows(force = false) {
-  if (isLoadingRows && !force) {
-    console.log('[loadRows] ignorado porque já está carregando');
-    return;
-  }
+  if (isLoadingRows && !force) return;
 
   isLoadingRows = true;
   console.log('[loadRows] início');
@@ -363,13 +361,11 @@ async function saveRecord() {
         .from('oficios')
         .update(payload)
         .eq('id', els.recordId.value);
-
       console.log('[saveRecord] update', result);
     } else {
       result = await supabaseClient
         .from('oficios')
         .insert([payload]);
-
       console.log('[saveRecord] insert', result);
     }
 
@@ -426,6 +422,8 @@ async function login() {
 }
 
 async function logout() {
+  console.log('[logout] clique detectado');
+
   try {
     const { error } = await supabaseClient.auth.signOut();
 
@@ -436,8 +434,8 @@ async function logout() {
     }
 
     currentUser = null;
-    showToast('Sessão encerrada.');
     await applyAuthState();
+    showToast('Sessão encerrada.');
   } catch (err) {
     showToast(`Erro ao sair: ${err.message || err}`);
     console.error('[logout] catch', err);
@@ -446,9 +444,16 @@ async function logout() {
 
 async function applyAuthState() {
   console.log('[applyAuthState] currentUser', currentUser);
+
   if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !currentUser);
   if (els.showLoginBtn) els.showLoginBtn.classList.toggle('hidden', !!currentUser);
   if (els.loginSection) els.loginSection.classList.toggle('hidden', !!currentUser);
+
+  if (els.authStatus) {
+    els.authStatus.textContent = currentUser?.email
+      ? `Conectado como ${currentUser.email}`
+      : 'Não autenticado';
+  }
 }
 
 function csvEscape(value) {
@@ -694,7 +699,6 @@ bind(els.recebidoFilter, 'change', render);
 bind(els.respondidoFilter, 'change', render);
 bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
-bind(els.logoutBtn, 'click', logout);
 bind(els.showLoginBtn, 'click', () => {
   if (els.loginSection) els.loginSection.classList.toggle('hidden');
 });
@@ -711,6 +715,7 @@ bind(els.dataRecebimento, 'change', autoFillDeadline);
 bind(els.prazoDias, 'input', autoFillDeadline);
 
 window.login = login;
+window.logout = logout;
 window.saveRecord = saveRecord;
 window.resetForm = resetForm;
 
@@ -718,7 +723,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   console.log('[onAuthStateChange]', event, session);
   currentUser = session?.user || null;
   await applyAuthState();
-  await loadRows(true);
 });
 
 (async function init() {
@@ -729,6 +733,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   } catch (err) {
     console.error('[init] getSession catch', err);
   }
+
   await applyAuthState();
   await loadRows(true);
 })();
