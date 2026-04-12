@@ -8,6 +8,7 @@ window.supabaseClient = supabaseClient;
 
 let allRows = [];
 let currentUser = null;
+let isSaving = false;
 
 const els = {
   loginSection: document.getElementById('loginSection'),
@@ -36,7 +37,8 @@ const els = {
   dataLimite: document.getElementById('data_limite_resposta'),
   respondido: document.getElementById('respondido'),
   dataResposta: document.getElementById('data_resposta'),
-  observacoes: document.getElementById('observacoes')
+  observacoes: document.getElementById('observacoes'),
+  saveBtn: document.getElementById('saveBtn')
 };
 
 function bind(el, event, handler) {
@@ -199,22 +201,43 @@ function render() {
   renderTable(rows);
 }
 
+async function runWithTimeout(label, promise, ms = 15000) {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} excedeu ${ms / 1000}s sem resposta`));
+    }, ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function loadRows() {
   console.log('[loadRows] início');
-  const { data, error } = await supabaseClient
-    .from('oficios')
-    .select('*')
-    .order('created_at', { ascending: false });
 
-  if (error) {
-    showToast(`Erro ao carregar: ${error.message}`);
-    console.error('[loadRows]', error);
-    return;
+  try {
+    const result = await runWithTimeout(
+      'Carregamento de registros',
+      supabaseClient.from('oficios').select('*').order('created_at', { ascending: false })
+    );
+
+    if (result.error) {
+      showToast(`Erro ao carregar: ${result.error.message}`);
+      console.error('[loadRows]', result.error);
+      return;
+    }
+
+    allRows = (result.data || []).map(enrichRow);
+    fillStatusFilter(allRows);
+    render();
+  } catch (err) {
+    showToast(`Erro ao carregar: ${err.message}`);
+    console.error('[loadRows] catch', err);
   }
-
-  allRows = (data || []).map(enrichRow);
-  fillStatusFilter(allRows);
-  render();
 }
 
 function autoFillDeadline() {
@@ -260,6 +283,14 @@ function resetForm() {
   if (els.editingBadge) els.editingBadge.classList.add('hidden');
 }
 
+function setSavingState(saving) {
+  isSaving = saving;
+  if (els.saveBtn) {
+    els.saveBtn.disabled = saving;
+    els.saveBtn.textContent = saving ? 'Salvando...' : 'Salvar';
+  }
+}
+
 function fillForm(row) {
   if (els.recordId) els.recordId.value = row.id;
   if (els.numeroOficio) els.numeroOficio.value = row.numero_oficio || '';
@@ -287,21 +318,33 @@ window.deleteRow = async function(id) {
 
   if (!confirm('Deseja excluir este registro?')) return;
 
-  const { error } = await supabaseClient.from('oficios').delete().eq('id', id);
+  try {
+    const result = await runWithTimeout(
+      'Exclusão',
+      supabaseClient.from('oficios').delete().eq('id', id)
+    );
 
-  if (error) {
-    showToast(`Erro ao excluir: ${error.message}`);
-    console.error('[deleteRow]', error);
-    return;
+    console.log('[deleteRow] result', result);
+
+    if (result.error) {
+      showToast(`Erro ao excluir: ${result.error.message}`);
+      console.error('[deleteRow]', result.error);
+      return;
+    }
+
+    showToast('Registro excluído.');
+    await loadRows();
+  } catch (err) {
+    showToast(`Erro ao excluir: ${err.message}`);
+    console.error('[deleteRow] catch', err);
   }
-
-  showToast('Registro excluído.');
-  await loadRows();
 };
 
 async function saveRecord() {
   console.log('[saveRecord] clique detectado');
   console.log('[saveRecord] currentUser', currentUser);
+
+  if (isSaving) return;
 
   if (!currentUser) {
     showToast('Faça login para salvar.');
@@ -316,19 +359,22 @@ async function saveRecord() {
     return;
   }
 
+  setSavingState(true);
+
   try {
     let result;
 
     if (els.recordId?.value) {
-      result = await supabaseClient
-        .from('oficios')
-        .update(payload)
-        .eq('id', els.recordId.value);
+      result = await runWithTimeout(
+        'Atualização',
+        supabaseClient.from('oficios').update(payload).eq('id', els.recordId.value)
+      );
       console.log('[saveRecord] update', result);
     } else {
-      result = await supabaseClient
-        .from('oficios')
-        .insert([payload]);
+      result = await runWithTimeout(
+        'Inserção',
+        supabaseClient.from('oficios').insert([payload])
+      );
       console.log('[saveRecord] insert', result);
     }
 
@@ -342,8 +388,10 @@ async function saveRecord() {
     resetForm();
     await loadRows();
   } catch (err) {
-    showToast(`Erro inesperado ao salvar: ${err.message || err}`);
+    showToast(`Erro ao salvar: ${err.message}`);
     console.error('[saveRecord] catch', err);
+  } finally {
+    setSavingState(false);
   }
 }
 
@@ -359,10 +407,10 @@ async function login() {
   }
 
   try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
+    const { data, error } = await runWithTimeout(
+      'Login',
+      supabaseClient.auth.signInWithPassword({ email, password })
+    );
 
     console.log('[login] result', { data, error });
 
@@ -377,16 +425,28 @@ async function login() {
     await loadRows();
     showToast('Login realizado.');
   } catch (err) {
-    showToast(`Erro inesperado no login: ${err.message || err}`);
+    showToast(`Erro no login: ${err.message}`);
     console.error('[login] catch', err);
   }
 }
 
 async function logout() {
-  await supabaseClient.auth.signOut();
-  currentUser = null;
-  showToast('Sessão encerrada.');
-  await applyAuthState();
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+      showToast(`Erro ao sair: ${error.message}`);
+      console.error('[logout]', error);
+      return;
+    }
+
+    currentUser = null;
+    showToast('Sessão encerrada.');
+    await applyAuthState();
+  } catch (err) {
+    showToast(`Erro ao sair: ${err.message || err}`);
+    console.error('[logout] catch', err);
+  }
 }
 
 async function applyAuthState() {
@@ -616,16 +676,24 @@ async function importCsvFile(file) {
     return;
   }
 
-  const { error } = await supabaseClient.from('oficios').insert(payloads);
+  try {
+    const result = await runWithTimeout(
+      'Importação CSV',
+      supabaseClient.from('oficios').insert(payloads)
+    );
 
-  if (error) {
-    showToast(`Erro ao importar CSV: ${error.message}`);
-    console.error('[importCsvFile]', error);
-    return;
+    if (result.error) {
+      showToast(`Erro ao importar CSV: ${result.error.message}`);
+      console.error('[importCsvFile]', result.error);
+      return;
+    }
+
+    showToast(`${payloads.length} registro(s) importado(s).`);
+    await loadRows();
+  } catch (err) {
+    showToast(`Erro ao importar CSV: ${err.message}`);
+    console.error('[importCsvFile] catch', err);
   }
-
-  showToast(`${payloads.length} registro(s) importado(s).`);
-  await loadRows();
 }
 
 bind(els.searchInput, 'input', render);
