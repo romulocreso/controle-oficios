@@ -317,26 +317,24 @@ async function saveRecord() {
   }
 
   try {
-    let error;
+    let result;
 
     if (els.recordId?.value) {
-      const result = await supabaseClient
+      result = await supabaseClient
         .from('oficios')
         .update(payload)
         .eq('id', els.recordId.value);
-      error = result.error;
       console.log('[saveRecord] update', result);
     } else {
-      const result = await supabaseClient
+      result = await supabaseClient
         .from('oficios')
         .insert([payload]);
-      error = result.error;
       console.log('[saveRecord] insert', result);
     }
 
-    if (error) {
-      showToast(`Erro ao salvar: ${error.message}`);
-      console.error('[saveRecord] error', error);
+    if (result.error) {
+      showToast(`Erro ao salvar: ${result.error.message}`);
+      console.error('[saveRecord] error', result.error);
       return;
     }
 
