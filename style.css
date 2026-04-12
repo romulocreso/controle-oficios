@@ -424,7 +424,8 @@ tr:hover td {
 
 .badge.neutral,
 .badge.SEM\ PRAZO,
-.badge.PENDENTE\ DE\ DADOS {
+.badge.PENDENTE\ DE\ DADOS,
+.badge.AGUARDANDO\ DATA {
   background: var(--neutral-bg);
   color: var(--neutral-text);
 }
@@ -464,6 +465,39 @@ tr:hover td {
   display: none !important;
 }
 
+/* Página de login separada */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-card h1 {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Tablet */
 @media (max-width: 1024px) {
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -478,6 +512,7 @@ tr:hover td {
   }
 }
 
+/* Celular */
 @media (max-width: 640px) {
   .topbar,
   .page {
@@ -523,5 +558,17 @@ tr:hover td {
 
   table {
     min-width: 760px;
+  }
+
+  .login-page {
+    padding: 14px;
+  }
+
+  .login-card {
+    padding: 18px;
+  }
+
+  .login-card h1 {
+    font-size: 24px;
   }
 }
