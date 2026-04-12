@@ -9,6 +9,7 @@ window.supabaseClient = supabaseClient;
 let allRows = [];
 let currentUser = null;
 let isSaving = false;
+let isLoadingRows = false;
 
 const els = {
   loginSection: document.getElementById('loginSection'),
@@ -201,29 +202,20 @@ function render() {
   renderTable(rows);
 }
 
-async function runWithTimeout(label, promise, ms = 15000) {
-  let timer;
-  const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`${label} excedeu ${ms / 1000}s sem resposta`));
-    }, ms);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timer);
+async function loadRows(force = false) {
+  if (isLoadingRows && !force) {
+    console.log('[loadRows] ignorado porque já está carregando');
+    return;
   }
-}
 
-async function loadRows() {
+  isLoadingRows = true;
   console.log('[loadRows] início');
 
   try {
-    const result = await runWithTimeout(
-      'Carregamento de registros',
-      supabaseClient.from('oficios').select('*').order('created_at', { ascending: false })
-    );
+    const result = await supabaseClient
+      .from('oficios')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (result.error) {
       showToast(`Erro ao carregar: ${result.error.message}`);
@@ -235,8 +227,10 @@ async function loadRows() {
     fillStatusFilter(allRows);
     render();
   } catch (err) {
-    showToast(`Erro ao carregar: ${err.message}`);
+    showToast(`Erro ao carregar: ${err.message || err}`);
     console.error('[loadRows] catch', err);
+  } finally {
+    isLoadingRows = false;
   }
 }
 
@@ -319,10 +313,10 @@ window.deleteRow = async function(id) {
   if (!confirm('Deseja excluir este registro?')) return;
 
   try {
-    const result = await runWithTimeout(
-      'Exclusão',
-      supabaseClient.from('oficios').delete().eq('id', id)
-    );
+    const result = await supabaseClient
+      .from('oficios')
+      .delete()
+      .eq('id', id);
 
     console.log('[deleteRow] result', result);
 
@@ -333,9 +327,9 @@ window.deleteRow = async function(id) {
     }
 
     showToast('Registro excluído.');
-    await loadRows();
+    await loadRows(true);
   } catch (err) {
-    showToast(`Erro ao excluir: ${err.message}`);
+    showToast(`Erro ao excluir: ${err.message || err}`);
     console.error('[deleteRow] catch', err);
   }
 };
@@ -365,16 +359,17 @@ async function saveRecord() {
     let result;
 
     if (els.recordId?.value) {
-      result = await runWithTimeout(
-        'Atualização',
-        supabaseClient.from('oficios').update(payload).eq('id', els.recordId.value)
-      );
+      result = await supabaseClient
+        .from('oficios')
+        .update(payload)
+        .eq('id', els.recordId.value);
+
       console.log('[saveRecord] update', result);
     } else {
-      result = await runWithTimeout(
-        'Inserção',
-        supabaseClient.from('oficios').insert([payload])
-      );
+      result = await supabaseClient
+        .from('oficios')
+        .insert([payload]);
+
       console.log('[saveRecord] insert', result);
     }
 
@@ -386,9 +381,9 @@ async function saveRecord() {
 
     showToast(els.recordId?.value ? 'Registro atualizado.' : 'Registro criado.');
     resetForm();
-    await loadRows();
+    await loadRows(true);
   } catch (err) {
-    showToast(`Erro ao salvar: ${err.message}`);
+    showToast(`Erro ao salvar: ${err.message || err}`);
     console.error('[saveRecord] catch', err);
   } finally {
     setSavingState(false);
@@ -407,10 +402,10 @@ async function login() {
   }
 
   try {
-    const { data, error } = await runWithTimeout(
-      'Login',
-      supabaseClient.auth.signInWithPassword({ email, password })
-    );
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
     console.log('[login] result', { data, error });
 
@@ -422,10 +417,10 @@ async function login() {
 
     currentUser = data?.user || data?.session?.user || null;
     await applyAuthState();
-    await loadRows();
+    await loadRows(true);
     showToast('Login realizado.');
   } catch (err) {
-    showToast(`Erro no login: ${err.message}`);
+    showToast(`Erro no login: ${err.message || err}`);
     console.error('[login] catch', err);
   }
 }
@@ -677,10 +672,7 @@ async function importCsvFile(file) {
   }
 
   try {
-    const result = await runWithTimeout(
-      'Importação CSV',
-      supabaseClient.from('oficios').insert(payloads)
-    );
+    const result = await supabaseClient.from('oficios').insert(payloads);
 
     if (result.error) {
       showToast(`Erro ao importar CSV: ${result.error.message}`);
@@ -689,9 +681,9 @@ async function importCsvFile(file) {
     }
 
     showToast(`${payloads.length} registro(s) importado(s).`);
-    await loadRows();
+    await loadRows(true);
   } catch (err) {
-    showToast(`Erro ao importar CSV: ${err.message}`);
+    showToast(`Erro ao importar CSV: ${err.message || err}`);
     console.error('[importCsvFile] catch', err);
   }
 }
@@ -700,7 +692,7 @@ bind(els.searchInput, 'input', render);
 bind(els.statusFilter, 'change', render);
 bind(els.recebidoFilter, 'change', render);
 bind(els.respondidoFilter, 'change', render);
-bind(els.refreshBtn, 'click', loadRows);
+bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
 bind(els.logoutBtn, 'click', logout);
 bind(els.showLoginBtn, 'click', () => {
@@ -726,7 +718,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   console.log('[onAuthStateChange]', event, session);
   currentUser = session?.user || null;
   await applyAuthState();
-  await loadRows();
+  await loadRows(true);
 });
 
 (async function init() {
@@ -738,5 +730,5 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     console.error('[init] getSession catch', err);
   }
   await applyAuthState();
-  await loadRows();
+  await loadRows(true);
 })();
