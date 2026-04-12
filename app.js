@@ -12,8 +12,8 @@ let isSaving = false;
 let isLoadingRows = false;
 
 const els = {
+  protectedApp: document.getElementById('protectedApp'),
   loginSection: document.getElementById('loginSection'),
-  showLoginBtn: document.getElementById('showLoginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
   authStatus: document.getElementById('authStatus'),
   loginEmail: document.getElementById('loginEmail'),
@@ -225,6 +225,12 @@ function render() {
 }
 
 async function loadRows(force = false) {
+  if (!currentUser) {
+    allRows = [];
+    render();
+    return;
+  }
+
   if (isLoadingRows && !force) return;
 
   isLoadingRows = true;
@@ -460,7 +466,9 @@ async function logout() {
     }
 
     currentUser = null;
+    allRows = [];
     await applyAuthState();
+    render();
     showToast('Sessão encerrada.');
   } catch (err) {
     showToast(`Erro ao sair: ${err.message || err}`);
@@ -471,12 +479,14 @@ async function logout() {
 async function applyAuthState() {
   console.log('[applyAuthState] currentUser', currentUser);
 
-  if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !currentUser);
-  if (els.showLoginBtn) els.showLoginBtn.classList.toggle('hidden', !!currentUser);
-  if (els.loginSection) els.loginSection.classList.toggle('hidden', !!currentUser);
+  const loggedIn = !!currentUser;
+
+  if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !loggedIn);
+  if (els.loginSection) els.loginSection.classList.toggle('hidden', loggedIn);
+  if (els.protectedApp) els.protectedApp.classList.toggle('hidden', !loggedIn);
 
   if (els.authStatus) {
-    els.authStatus.textContent = currentUser?.email
+    els.authStatus.textContent = loggedIn
       ? `Conectado como ${currentUser.email}`
       : 'Não autenticado';
   }
@@ -725,9 +735,6 @@ bind(els.recebidoFilter, 'change', render);
 bind(els.respondidoFilter, 'change', render);
 bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
-bind(els.showLoginBtn, 'click', () => {
-  if (els.loginSection) els.loginSection.classList.toggle('hidden');
-});
 bind(els.importBtn, 'click', () => {
   els.csvFileInput?.click();
 });
