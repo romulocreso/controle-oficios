@@ -208,11 +208,10 @@ async function loadRows() {
 
   if (error) {
     showToast(`Erro ao carregar: ${error.message}`);
-    console.error('[loadRows] error', error);
+    console.error('[loadRows]', error);
     return;
   }
 
-  console.log('[loadRows] data', data);
   allRows = (data || []).map(enrichRow);
   fillStatusFilter(allRows);
   render();
@@ -304,47 +303,44 @@ async function saveRecord() {
   console.log('[saveRecord] clique detectado');
   console.log('[saveRecord] currentUser', currentUser);
 
+  if (!currentUser) {
+    showToast('Faça login para salvar.');
+    return;
+  }
+
+  const payload = formData();
+  console.log('[saveRecord] payload', payload);
+
+  if (!payload.numero_oficio) {
+    showToast('Informe o número do ofício.');
+    return;
+  }
+
   try {
-    if (!currentUser) {
-      showToast('Faça login para salvar.');
-      return;
-    }
+    let error;
 
-    const payload = formData();
-    console.log('[saveRecord] payload', payload);
-
-    if (!payload.numero_oficio) {
-      showToast('Informe o número do ofício.');
-      return;
-    }
-
-    let result;
-    const id = els.recordId?.value || '';
-
-    if (id) {
-      result = await supabaseClient
+    if (els.recordId?.value) {
+      const result = await supabaseClient
         .from('oficios')
         .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
+        .eq('id', els.recordId.value);
+      error = result.error;
+      console.log('[saveRecord] update', result);
     } else {
-      result = await supabaseClient
+      const result = await supabaseClient
         .from('oficios')
-        .insert(payload)
-        .select()
-        .single();
+        .insert([payload]);
+      error = result.error;
+      console.log('[saveRecord] insert', result);
     }
 
-    console.log('[saveRecord] result', result);
-
-    if (result.error) {
-      showToast(`Erro ao salvar: ${result.error.message}`);
-      console.error('[saveRecord] result.error', result.error);
+    if (error) {
+      showToast(`Erro ao salvar: ${error.message}`);
+      console.error('[saveRecord] error', error);
       return;
     }
 
-    showToast(id ? 'Registro atualizado.' : 'Registro criado.');
+    showToast(els.recordId?.value ? 'Registro atualizado.' : 'Registro criado.');
     resetForm();
     await loadRows();
   } catch (err) {
@@ -379,8 +375,6 @@ async function login() {
     }
 
     currentUser = data?.user || data?.session?.user || null;
-    console.log('[login] currentUser', currentUser);
-
     await applyAuthState();
     await loadRows();
     showToast('Login realizado.');
