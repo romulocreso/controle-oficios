@@ -4,6 +4,8 @@ const supabaseClient = window.supabase.createClient(
   APP_CONFIG.SUPABASE_ANON_KEY
 );
 
+window.supabaseClient = supabaseClient;
+
 let allRows = [];
 let currentUser = null;
 
@@ -279,9 +281,6 @@ window.editRow = function(id) {
 };
 
 window.deleteRow = async function(id) {
-  const sessionResult = await supabaseClient.auth.getSession();
-  currentUser = sessionResult?.data?.session?.user || null;
-
   if (!currentUser) {
     showToast('Faça login para excluir.');
     return;
@@ -303,14 +302,9 @@ window.deleteRow = async function(id) {
 
 async function saveRecord() {
   console.log('[saveRecord] clique detectado');
+  console.log('[saveRecord] currentUser', currentUser);
 
   try {
-    const sessionResult = await supabaseClient.auth.getSession();
-    console.log('[saveRecord] sessionResult', sessionResult);
-
-    currentUser = sessionResult?.data?.session?.user || null;
-    console.log('[saveRecord] currentUser', currentUser);
-
     if (!currentUser) {
       showToast('Faça login para salvar.');
       return;
@@ -385,6 +379,8 @@ async function login() {
     }
 
     currentUser = data?.user || data?.session?.user || null;
+    console.log('[login] currentUser', currentUser);
+
     await refreshSession();
     await loadRows();
     showToast('Login realizado.');
@@ -402,9 +398,13 @@ async function logout() {
 }
 
 async function refreshSession() {
-  const { data } = await supabaseClient.auth.getSession();
-  currentUser = data?.session?.user || null;
-  console.log('[refreshSession] currentUser', currentUser);
+  try {
+    const { data } = await supabaseClient.auth.getSession();
+    currentUser = data?.session?.user || currentUser || null;
+    console.log('[refreshSession] currentUser', currentUser);
+  } catch (err) {
+    console.error('[refreshSession] catch', err);
+  }
 
   if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !currentUser);
   if (els.showLoginBtn) els.showLoginBtn.classList.toggle('hidden', !!currentUser);
@@ -602,9 +602,6 @@ function cleanImportedPayload(row) {
 }
 
 async function importCsvFile(file) {
-  const sessionResult = await supabaseClient.auth.getSession();
-  currentUser = sessionResult?.data?.session?.user || null;
-
   if (!currentUser) {
     showToast('Faça login para importar.');
     return;
