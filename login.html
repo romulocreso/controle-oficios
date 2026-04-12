@@ -12,19 +12,39 @@
   <main class="login-page">
     <section class="login-card">
       <h1>Controle de Ofícios</h1>
-      <p class="login-subtitle">Entre para acessar o sistema.</p>
+      <p class="login-subtitle">Faça login para acessar o sistema.</p>
 
-      <label>
-        <span>Email</span>
-        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
-      </label>
+      <hr class="login-divider" />
 
-      <label>
-        <span>Senha</span>
-        <input type="password" id="loginPassword" placeholder="********" />
-      </label>
+      <form id="loginForm">
+        <label>
+          <span>E-mail</span>
+          <div class="input-icon">
+            <span class="input-symbol">✉</span>
+            <input
+              type="email"
+              id="loginEmail"
+              placeholder="Digite seu e-mail"
+              autocomplete="username"
+            />
+          </div>
+        </label>
 
-      <button type="button" class="btn btn-primary" onclick="login()">Entrar</button>
+        <label>
+          <span>Senha</span>
+          <div class="input-icon">
+            <span class="input-symbol">🔒</span>
+            <input
+              type="password"
+              id="loginPassword"
+              placeholder="Digite sua senha"
+              autocomplete="current-password"
+            />
+          </div>
+        </label>
+
+        <button type="submit" class="btn btn-primary login-submit">Entrar</button>
+      </form>
 
       <div id="toast" class="toast hidden"></div>
     </section>
