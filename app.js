@@ -381,7 +381,7 @@ async function login() {
     currentUser = data?.user || data?.session?.user || null;
     console.log('[login] currentUser', currentUser);
 
-    await refreshSession();
+    await applyAuthState();
     await loadRows();
     showToast('Login realizado.');
   } catch (err) {
@@ -394,18 +394,11 @@ async function logout() {
   await supabaseClient.auth.signOut();
   currentUser = null;
   showToast('Sessão encerrada.');
-  await refreshSession();
+  await applyAuthState();
 }
 
-async function refreshSession() {
-  try {
-    const { data } = await supabaseClient.auth.getSession();
-    currentUser = data?.session?.user || currentUser || null;
-    console.log('[refreshSession] currentUser', currentUser);
-  } catch (err) {
-    console.error('[refreshSession] catch', err);
-  }
-
+async function applyAuthState() {
+  console.log('[applyAuthState] currentUser', currentUser);
   if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !currentUser);
   if (els.showLoginBtn) els.showLoginBtn.classList.toggle('hidden', !!currentUser);
   if (els.loginSection) els.loginSection.classList.toggle('hidden', !!currentUser);
@@ -669,14 +662,21 @@ window.login = login;
 window.saveRecord = saveRecord;
 window.resetForm = resetForm;
 
-supabaseClient.auth.onAuthStateChange(async () => {
-  console.log('[onAuthStateChange]');
-  await refreshSession();
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  console.log('[onAuthStateChange]', event, session);
+  currentUser = session?.user || null;
+  await applyAuthState();
   await loadRows();
 });
 
 (async function init() {
   console.log('[init]');
-  await refreshSession();
+  try {
+    const { data } = await supabaseClient.auth.getSession();
+    currentUser = data?.session?.user || null;
+  } catch (err) {
+    console.error('[init] getSession catch', err);
+  }
+  await applyAuthState();
   await loadRows();
 })();
