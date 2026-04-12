@@ -13,206 +13,181 @@
     <div class="topbar-left">
       <h1>Controle de Ofícios</h1>
       <p class="subtitle">Gerencie e acompanhe seus ofícios.</p>
-      <p id="authStatus" class="auth-status">Não autenticado</p>
+      <p id="authStatus" class="auth-status">Carregando sessão...</p>
     </div>
 
     <div class="topbar-actions">
-      <button id="logoutBtn" type="button" class="btn btn-secondary hidden" onclick="logout()">Sair</button>
+      <button id="logoutBtn" type="button" class="btn btn-secondary" onclick="logout()">Sair</button>
     </div>
   </header>
 
   <main class="page">
-    <section id="loginSection" class="panel login-panel">
-      <div class="section-title">
-        <h2>Acesso</h2>
-        <p>Use seu e-mail e senha para entrar no sistema.</p>
+    <section class="summary-strip">
+      <div class="summary-card blue">
+        <div class="summary-label">Total de Ofícios</div>
+        <div class="summary-value" id="summaryTotal">0</div>
       </div>
 
-      <div class="grid two">
-        <label>
-          <span>Email</span>
-          <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
-        </label>
-
-        <label>
-          <span>Senha</span>
-          <input type="password" id="loginPassword" placeholder="********" />
-        </label>
+      <div class="summary-card green">
+        <div class="summary-label">No Prazo</div>
+        <div class="summary-value" id="summaryNoPrazo">0</div>
       </div>
 
-      <div class="actions">
-        <button id="loginBtn" type="button" class="btn btn-primary" onclick="login()">Entrar</button>
+      <div class="summary-card yellow">
+        <div class="summary-label">Vence Hoje</div>
+        <div class="summary-value" id="summaryVenceHoje">0</div>
+      </div>
+
+      <div class="summary-card red">
+        <div class="summary-label">Vencidos</div>
+        <div class="summary-value" id="summaryVencidos">0</div>
       </div>
     </section>
 
-    <div id="protectedApp" class="hidden">
-      <section class="summary-strip">
-        <div class="summary-card blue">
-          <div class="summary-label">Total de Ofícios</div>
-          <div class="summary-value" id="summaryTotal">0</div>
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Novo Registro</h2>
+          <p class="panel-subtitle">Cadastre ou edite os dados do ofício.</p>
+        </div>
+        <span id="editingBadge" class="badge neutral hidden">Editando registro</span>
+      </div>
+
+      <form id="oficioForm" class="form-card">
+        <input type="hidden" id="recordId" />
+
+        <div class="grid two">
+          <label>
+            <span>Número do Ofício</span>
+            <input type="text" id="numero_oficio" />
+          </label>
+
+          <label>
+            <span>Recebido</span>
+            <select id="recebido">
+              <option value="">Selecione</option>
+              <option value="SIM">SIM</option>
+              <option value="NAO">NAO</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Data de Recebimento</span>
+            <input type="date" id="data_recebimento" />
+          </label>
+
+          <label>
+            <span>Prazo de Resposta (dias)</span>
+            <input type="number" min="0" id="prazo_resposta_dias" />
+          </label>
+
+          <label>
+            <span>Data Limite</span>
+            <input type="date" id="data_limite_resposta" />
+          </label>
+
+          <label>
+            <span>Respondido</span>
+            <select id="respondido">
+              <option value="">Selecione</option>
+              <option value="SIM">SIM</option>
+              <option value="NAO">NAO</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Data da Resposta</span>
+            <input type="date" id="data_resposta" />
+          </label>
+
+          <label class="full">
+            <span>Observações</span>
+            <textarea id="observacoes" rows="4"></textarea>
+          </label>
         </div>
 
-        <div class="summary-card green">
-          <div class="summary-label">No Prazo</div>
-          <div class="summary-value" id="summaryNoPrazo">0</div>
+        <div class="actions centered">
+          <button id="saveBtn" type="button" class="btn btn-primary" onclick="saveRecord()">Salvar Registro</button>
+          <button id="clearBtn" type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Ofícios Cadastrados</h2>
+          <p class="panel-subtitle">Consulte, filtre e acompanhe os registros cadastrados.</p>
         </div>
 
-        <div class="summary-card yellow">
-          <div class="summary-label">Vence Hoje</div>
-          <div class="summary-value" id="summaryVenceHoje">0</div>
+        <div class="actions inline no-margin">
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
+          <button id="importBtn" type="button" class="btn btn-secondary">Importar CSV</button>
+          <button id="refreshBtn" type="button" class="btn btn-secondary">Atualizar</button>
+          <button id="exportBtn" type="button" class="btn btn-secondary">Exportar CSV</button>
         </div>
+      </div>
 
-        <div class="summary-card red">
-          <div class="summary-label">Vencidos</div>
-          <div class="summary-value" id="summaryVencidos">0</div>
+      <div class="filter-bar">
+        <div class="grid four">
+          <label>
+            <span>Busca</span>
+            <input type="text" id="searchInput" placeholder="número, observações" />
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select id="statusFilter">
+              <option value="">Todos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Recebido</span>
+            <select id="recebidoFilter">
+              <option value="">Todos</option>
+              <option value="SIM">SIM</option>
+              <option value="NAO">NAO</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Respondido</span>
+            <select id="respondidoFilter">
+              <option value="">Todos</option>
+              <option value="SIM">SIM</option>
+              <option value="NAO">NAO</option>
+            </select>
+          </label>
         </div>
-      </section>
+      </div>
 
-      <section class="panel form-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Novo Registro</h2>
-            <p class="panel-subtitle">Cadastre ou edite os dados do ofício.</p>
-          </div>
-          <span id="editingBadge" class="badge neutral hidden">Editando registro</span>
-        </div>
+      <div id="stats" class="stats"></div>
 
-        <form id="oficioForm" class="form-card">
-          <input type="hidden" id="recordId" />
-
-          <div class="grid two">
-            <label>
-              <span>Número do Ofício</span>
-              <input type="text" id="numero_oficio" />
-            </label>
-
-            <label>
-              <span>Recebido</span>
-              <select id="recebido">
-                <option value="">Selecione</option>
-                <option value="SIM">SIM</option>
-                <option value="NAO">NAO</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Data de Recebimento</span>
-              <input type="date" id="data_recebimento" />
-            </label>
-
-            <label>
-              <span>Prazo de Resposta (dias)</span>
-              <input type="number" min="0" id="prazo_resposta_dias" />
-            </label>
-
-            <label>
-              <span>Data Limite</span>
-              <input type="date" id="data_limite_resposta" />
-            </label>
-
-            <label>
-              <span>Respondido</span>
-              <select id="respondido">
-                <option value="">Selecione</option>
-                <option value="SIM">SIM</option>
-                <option value="NAO">NAO</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Data da Resposta</span>
-              <input type="date" id="data_resposta" />
-            </label>
-
-            <label class="full">
-              <span>Observações</span>
-              <textarea id="observacoes" rows="4"></textarea>
-            </label>
-          </div>
-
-          <div class="actions centered">
-            <button id="saveBtn" type="button" class="btn btn-primary" onclick="saveRecord()">Salvar Registro</button>
-            <button id="clearBtn" type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="panel table-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Ofícios Cadastrados</h2>
-            <p class="panel-subtitle">Consulte, filtre e acompanhe os registros cadastrados.</p>
-          </div>
-
-          <div class="actions inline no-margin">
-            <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
-            <button id="importBtn" type="button" class="btn btn-secondary">Importar CSV</button>
-            <button id="refreshBtn" type="button" class="btn btn-secondary">Atualizar</button>
-            <button id="exportBtn" type="button" class="btn btn-secondary">Exportar CSV</button>
-          </div>
-        </div>
-
-        <div class="filter-bar">
-          <div class="grid four">
-            <label>
-              <span>Busca</span>
-              <input type="text" id="searchInput" placeholder="número, observações" />
-            </label>
-
-            <label>
-              <span>Status</span>
-              <select id="statusFilter">
-                <option value="">Todos</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Recebido</span>
-              <select id="recebidoFilter">
-                <option value="">Todos</option>
-                <option value="SIM">SIM</option>
-                <option value="NAO">NAO</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Respondido</span>
-              <select id="respondidoFilter">
-                <option value="">Todos</option>
-                <option value="SIM">SIM</option>
-                <option value="NAO">NAO</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div id="stats" class="stats"></div>
-
-        <div class="table-wrap">
-          <table id="oficiosTable">
-            <thead>
-              <tr>
-                <th>Número</th>
-                <th>Recebido</th>
-                <th>Recebimento</th>
-                <th>Prazo</th>
-                <th>Data Limite</th>
-                <th>Respondido</th>
-                <th>Status</th>
-                <th>Observações</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+      <div class="table-wrap">
+        <table id="oficiosTable">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Recebido</th>
+              <th>Recebimento</th>
+              <th>Prazo</th>
+              <th>Data Limite</th>
+              <th>Respondido</th>
+              <th>Status</th>
+              <th>Observações</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
