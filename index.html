@@ -13,26 +13,31 @@
     <div>
       <h1>Controle de Ofícios</h1>
       <p class="subtitle">Cadastro, conferência humana e controle de prazo</p>
+      <p id="authStatus" class="subtitle">Não autenticado</p>
     </div>
+
     <div class="topbar-actions">
       <button id="showLoginBtn" type="button" class="secondary">Entrar</button>
-      <button id="logoutBtn" type="button" class="secondary hidden">Sair</button>
+      <button id="logoutBtn" type="button" class="secondary hidden" onclick="logout()">Sair</button>
     </div>
   </header>
 
   <main class="page">
     <section id="loginSection" class="panel hidden">
       <h2>Acesso</h2>
+
       <div class="grid two">
         <label>
           <span>Email</span>
           <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
         </label>
+
         <label>
           <span>Senha</span>
           <input type="password" id="loginPassword" placeholder="********" />
         </label>
       </div>
+
       <div class="actions">
         <button id="loginBtn" type="button" onclick="login()">Entrar</button>
       </div>
@@ -105,6 +110,7 @@
     <section class="panel">
       <div class="section-head">
         <h2>Filtros e conferência</h2>
+
         <div class="actions inline">
           <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
           <button id="importBtn" type="button" class="secondary">Importar CSV</button>
@@ -171,6 +177,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>
