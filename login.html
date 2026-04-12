@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Controle de Ofícios</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-card">
+      <h1>Controle de Ofícios</h1>
+      <p class="login-subtitle">Entre para acessar o sistema.</p>
+
+      <label>
+        <span>Email</span>
+        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
+      </label>
+
+      <label>
+        <span>Senha</span>
+        <input type="password" id="loginPassword" placeholder="********" />
+      </label>
+
+      <button type="button" class="btn btn-primary" onclick="login()">Entrar</button>
+
+      <div id="toast" class="toast hidden"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="login.js?v=1"></script>
+</body>
+</html>
