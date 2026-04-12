@@ -86,10 +86,19 @@ function diffDays(a, b) {
 function computeStatus(row) {
   const recebido = normalizeText(row.recebido);
   const respondido = normalizeText(row.respondido);
-  const recebDate = parseDate(row.data_recebimento);
+
+  let recebDate = parseDate(row.data_recebimento);
   const respostaDate = parseDate(row.data_resposta);
   const prazoDias = Number(row.prazo_resposta_dias || 0);
   let limite = parseDate(row.data_limite_resposta);
+
+  if (!recebDate && recebido === 'SIM' && row.created_at) {
+    const created = new Date(row.created_at);
+    if (!isNaN(created.getTime())) {
+      created.setHours(0, 0, 0, 0);
+      recebDate = created;
+    }
+  }
 
   if (!limite && recebDate && prazoDias > 0) {
     limite = addDays(recebDate, prazoDias);
@@ -101,7 +110,8 @@ function computeStatus(row) {
 
   if (respondido === 'SIM' || respostaDate) return 'RESPONDIDO';
   if (recebido === 'NAO') return 'NAO RECEBIDO';
-  if (!limite) return (recebido === 'SIM' || recebDate) ? 'SEM PRAZO' : 'PENDENTE DE DADOS';
+  if (recebido === 'SIM' && prazoDias > 0 && !recebDate && !limite) return 'AGUARDANDO DATA';
+  if (!limite) return 'SEM PRAZO';
 
   const delta = diffDays(limite, today);
   if (delta < 0) return 'VENCIDO';
@@ -161,6 +171,7 @@ function renderStats(rows) {
     naoRecebidos: rows.filter(r => normalizeText(r.recebido) === 'NAO').length,
     vencidos: rows.filter(r => r.status_prazo_calculado === 'VENCIDO').length,
     noPrazo: rows.filter(r => r.status_prazo_calculado === 'NO PRAZO').length,
+    venceHoje: rows.filter(r => r.status_prazo_calculado === 'VENCE HOJE').length,
     respondidos: rows.filter(r => normalizeText(r.respondido) === 'SIM').length,
   };
 
@@ -172,6 +183,16 @@ function renderStats(rows) {
     <div class="stat">Vencidos<strong>${stats.vencidos}</strong></div>
     <div class="stat">Respondidos<strong>${stats.respondidos}</strong></div>
   `;
+
+  const summaryTotal = document.getElementById('summaryTotal');
+  const summaryNoPrazo = document.getElementById('summaryNoPrazo');
+  const summaryVenceHoje = document.getElementById('summaryVenceHoje');
+  const summaryVencidos = document.getElementById('summaryVencidos');
+
+  if (summaryTotal) summaryTotal.textContent = stats.total;
+  if (summaryNoPrazo) summaryNoPrazo.textContent = stats.noPrazo;
+  if (summaryVenceHoje) summaryVenceHoje.textContent = stats.venceHoje;
+  if (summaryVencidos) summaryVencidos.textContent = stats.vencidos;
 }
 
 function renderTable(rows) {
@@ -215,13 +236,18 @@ async function loadRows(force = false) {
       .select('*')
       .order('created_at', { ascending: false });
 
+    console.log('[loadRows] result', result);
+
     if (result.error) {
       showToast(`Erro ao carregar: ${result.error.message}`);
-      console.error('[loadRows]', result.error);
+      console.error('[loadRows] error', result.error);
       return;
     }
 
     allRows = (result.data || []).map(enrichRow);
+    console.log('[loadRows] total linhas', allRows.length);
+    console.log('[loadRows] amostra', allRows[0]);
+
     fillStatusFilter(allRows);
     render();
   } catch (err) {
@@ -279,7 +305,7 @@ function setSavingState(saving) {
   isSaving = saving;
   if (els.saveBtn) {
     els.saveBtn.disabled = saving;
-    els.saveBtn.textContent = saving ? 'Salvando...' : 'Salvar';
+    els.saveBtn.textContent = saving ? 'Salvando...' : 'Salvar Registro';
   }
 }
 
