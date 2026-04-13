@@ -35,6 +35,7 @@ const els = {
   dataLimite: document.getElementById('data_limite_resposta'),
   respondido: document.getElementById('respondido'),
   dataResposta: document.getElementById('data_resposta'),
+  linkOficio: document.getElementById('link_oficio'),
   observacoes: document.getElementById('observacoes'),
   saveBtn: document.getElementById('saveBtn')
 };
@@ -149,7 +150,7 @@ function getFilteredRows() {
   const respondido = els.respondidoFilter?.value || '';
 
   return allRows.filter(row => {
-    const hay = [row.numero_oficio, row.observacoes].join(' ').toLowerCase();
+    const hay = [row.numero_oficio, row.observacoes, row.link_oficio].join(' ').toLowerCase();
     const matchesText = !q || hay.includes(q);
     const matchesStatus = !status || row.status_prazo_calculado === status;
     const matchesRecebido = !recebido || normalizeText(row.recebido) === recebido;
@@ -205,6 +206,12 @@ function renderTable(rows) {
       <td>${badge(row.status_prazo_calculado)}</td>
       <td>${escapeHtml(row.observacoes || '')}</td>
       <td>
+        ${row.link_oficio
+          ? `<a href="${escapeHtml(row.link_oficio)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Abrir</a>`
+          : ''
+        }
+      </td>
+      <td>
         <div class="row-actions">
           <button type="button" class="secondary" onclick="editRow('${row.id}')">Editar</button>
           <button type="button" class="danger" onclick="deleteRow('${row.id}')">Excluir</button>
@@ -237,8 +244,6 @@ async function loadRows(force = false) {
       .from('oficios')
       .select('*')
       .order('created_at', { ascending: false });
-
-    console.log('[loadRows] result', result);
 
     if (result.error) {
       showToast(`Erro ao carregar: ${result.error.message}`);
@@ -290,6 +295,7 @@ function formData() {
     data_limite_resposta: dataLimite,
     respondido: els.respondido?.value || null,
     data_resposta: els.dataResposta?.value || null,
+    link_oficio: els.linkOficio?.value.trim() || null,
     observacoes: els.observacoes?.value.trim() || null,
   };
 }
@@ -317,6 +323,7 @@ function fillForm(row) {
   if (els.dataLimite) els.dataLimite.value = row.data_limite_resposta || '';
   if (els.respondido) els.respondido.value = row.respondido || '';
   if (els.dataResposta) els.dataResposta.value = row.data_resposta || '';
+  if (els.linkOficio) els.linkOficio.value = row.link_oficio || '';
   if (els.observacoes) els.observacoes.value = row.observacoes || '';
   if (els.editingBadge) els.editingBadge.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -444,6 +451,7 @@ function exportFilteredCsv() {
     'data_limite_resposta',
     'respondido',
     'data_resposta',
+    'link_oficio',
     'observacoes',
     'status_prazo_calculado'
   ];
@@ -584,6 +592,13 @@ function normalizeImportedRow(row) {
       'resposta',
       'data da resposta'
     ])) || null,
+    link_oficio: pickValue(row, [
+      'link_oficio',
+      'link do oficio',
+      'link do ofício',
+      'link',
+      'url'
+    ]) || null,
     observacoes: pickValue(row, [
       'observacoes',
       'observação',
@@ -603,6 +618,7 @@ function cleanImportedPayload(row) {
     data_limite_resposta: row.data_limite_resposta || null,
     respondido: row.respondido || null,
     data_resposta: row.data_resposta || null,
+    link_oficio: row.link_oficio || null,
     observacoes: row.observacoes || null,
   };
 
@@ -640,6 +656,7 @@ async function importCsvFile(file) {
       row.data_recebimento ||
       row.prazo_resposta_dias ||
       row.data_limite_resposta ||
+      row.link_oficio ||
       row.observacoes
     );
 
