@@ -307,6 +307,10 @@ label span {
 
 .btn {
   min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .btn-primary {
@@ -325,6 +329,26 @@ label span {
 }
 
 .btn-secondary:hover {
+  background: var(--secondary-hover);
+}
+
+a.btn {
+  border-radius: var(--radius-sm);
+  padding: 11px 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+a.btn:hover {
+  transform: translateY(-1px);
+}
+
+a.btn-secondary {
+  background: var(--secondary);
+  color: var(--text);
+}
+
+a.btn-secondary:hover {
   background: var(--secondary-hover);
 }
 
@@ -408,6 +432,11 @@ tr:hover td {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: center;
+}
+
+.row-actions button {
+  min-width: 84px;
 }
 
 .badge {
@@ -574,6 +603,18 @@ tr:hover td {
   background: linear-gradient(135deg, #1753bb, #2164d8);
 }
 
+/* Coluna de link */
+#oficiosTable td:nth-child(9) {
+  white-space: nowrap;
+  text-align: center;
+}
+
+#oficiosTable td:nth-child(9) .btn {
+  min-width: 90px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 /* Tablet */
 @media (max-width: 1024px) {
   .summary-strip {
@@ -672,28 +713,4 @@ tr:hover td {
     font-size: 18px;
     padding: 15px 16px;
   }
-}
-
-/* Coluna de link */
-#oficiosTable td:nth-child(9) {
-  white-space: nowrap;
-  text-align: center;
-}
-
-#oficiosTable td:nth-child(9) .btn {
-  min-width: 90px;
-  padding: 8px 12px;
-  font-size: 14px;
-}
-
-/* Ações mais organizadas */
-.row-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.row-actions button {
-  min-width: 84px;
 }
