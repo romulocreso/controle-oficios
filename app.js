@@ -17,6 +17,7 @@ const els = {
   form: document.getElementById('oficioForm'),
   refreshBtn: document.getElementById('refreshBtn'),
   exportBtn: document.getElementById('exportBtn'),
+  exportPdfBtn: document.getElementById('exportPdfBtn'),
   importBtn: document.getElementById('importBtn'),
   csvFileInput: document.getElementById('csvFileInput'),
   searchInput: document.getElementById('searchInput'),
@@ -159,6 +160,22 @@ function getFilteredRows() {
   });
 }
 
+function getActiveFiltersLabel() {
+  const parts = [];
+
+  const busca = (els.searchInput?.value || '').trim();
+  const status = els.statusFilter?.value || '';
+  const recebido = els.recebidoFilter?.value || '';
+  const respondido = els.respondidoFilter?.value || '';
+
+  if (busca) parts.push(`Busca: ${busca}`);
+  if (status) parts.push(`Status: ${status}`);
+  if (recebido) parts.push(`Recebido: ${recebido}`);
+  if (respondido) parts.push(`Respondido: ${respondido}`);
+
+  return parts.length ? parts.join(' | ') : 'Sem filtros aplicados';
+}
+
 function renderStats(rows) {
   if (!els.stats) return;
 
@@ -237,7 +254,6 @@ async function loadRows(force = false) {
   if (isLoadingRows && !force) return;
 
   isLoadingRows = true;
-  console.log('[loadRows] início');
 
   try {
     const result = await supabaseClient
@@ -470,6 +486,85 @@ function exportFilteredCsv() {
   URL.revokeObjectURL(url);
 }
 
+function exportFilteredPdf() {
+  const rows = getFilteredRows();
+
+  if (!rows.length) {
+    showToast('Não há registros filtrados para gerar PDF.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('l', 'mm', 'a4');
+
+  const titulo = 'Relatório de Ofícios';
+  const filtros = getActiveFiltersLabel();
+  const dataGeracao = new Date().toLocaleString('pt-BR');
+
+  doc.setFontSize(16);
+  doc.text(titulo, 14, 14);
+
+  doc.setFontSize(10);
+  doc.text(`Emitido em: ${dataGeracao}`, 14, 22);
+  doc.text(`Filtros: ${filtros}`, 14, 28);
+
+  const body = rows.map(row => [
+    row.numero_oficio || '',
+    row.recebido || '',
+    formatDate(row.data_recebimento),
+    row.prazo_resposta_dias ?? '',
+    formatDate(row.data_limite_resposta),
+    row.respondido || '',
+    row.status_prazo_calculado || '',
+    row.observacoes || '',
+    row.link_oficio || ''
+  ]);
+
+  doc.autoTable({
+    startY: 34,
+    head: [[
+      'Número',
+      'Recebido',
+      'Recebimento',
+      'Prazo',
+      'Data Limite',
+      'Respondido',
+      'Status',
+      'Observações',
+      'Link'
+    ]],
+    body,
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      overflow: 'linebreak'
+    },
+    headStyles: {
+      fillColor: [33, 100, 216]
+    },
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 18 },
+      2: { cellWidth: 22 },
+      3: { cellWidth: 14 },
+      4: { cellWidth: 22 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 25 },
+      7: { cellWidth: 55 },
+      8: { cellWidth: 70 }
+    },
+    didDrawPage: function (data) {
+      const pageSize = doc.internal.pageSize;
+      const pageHeight = pageSize.height || pageSize.getHeight();
+      doc.setFontSize(9);
+      doc.text(`Total de registros: ${rows.length}`, 14, pageHeight - 8);
+    }
+  });
+
+  const nomeArquivo = `relatorio_oficios_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(nomeArquivo);
+}
+
 function normalizeHeader(value) {
   return (value || '')
     .toString()
@@ -688,6 +783,7 @@ bind(els.recebidoFilter, 'change', render);
 bind(els.respondidoFilter, 'change', render);
 bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
+bind(els.exportPdfBtn, 'click', exportFilteredPdf);
 bind(els.importBtn, 'click', () => {
   els.csvFileInput?.click();
 });
