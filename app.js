@@ -160,20 +160,13 @@ function getFilteredRows() {
   });
 }
 
-function getActiveFiltersLabel() {
-  const parts = [];
+function getRowsForPdf() {
+  const rows = getFilteredRows();
 
-  const busca = (els.searchInput?.value || '').trim();
-  const status = els.statusFilter?.value || '';
-  const recebido = els.recebidoFilter?.value || '';
-  const respondido = els.respondidoFilter?.value || '';
-
-  if (busca) parts.push(`Busca: ${busca}`);
-  if (status) parts.push(`Status: ${status}`);
-  if (recebido) parts.push(`Recebido: ${recebido}`);
-  if (respondido) parts.push(`Respondido: ${respondido}`);
-
-  return parts.length ? parts.join(' | ') : 'Sem filtros aplicados';
+  return rows.filter(row =>
+    row.status_prazo_calculado === 'VENCIDO' ||
+    normalizeText(row.respondido) !== 'SIM'
+  );
 }
 
 function renderStats(rows) {
@@ -512,10 +505,10 @@ function exportFilteredCsv() {
 }
 
 function exportFilteredPdf() {
-  const rows = getFilteredRows();
+  const rows = getRowsForPdf();
 
   if (!rows.length) {
-    showToast('Não há registros filtrados para gerar PDF.');
+    showToast('Não há registros vencidos ou não respondidos para gerar PDF.');
     return;
   }
 
@@ -523,7 +516,6 @@ function exportFilteredPdf() {
   const doc = new jsPDF('l', 'mm', 'a4');
 
   const titulo = 'Relatório de Ofícios';
-  const filtros = getActiveFiltersLabel();
   const dataGeracao = new Date().toLocaleString('pt-BR');
 
   doc.setFontSize(16);
@@ -531,7 +523,7 @@ function exportFilteredPdf() {
 
   doc.setFontSize(10);
   doc.text(`Emitido em: ${dataGeracao}`, 14, 22);
-  doc.text(`Filtros: ${filtros}`, 14, 28);
+  doc.text('Critério: registros vencidos e/ou não respondidos', 14, 28);
 
   const body = rows.map(row => [
     row.numero_oficio || '',
