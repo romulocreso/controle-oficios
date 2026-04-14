@@ -7,6 +7,8 @@
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -134,6 +136,7 @@
           <button id="importBtn" type="button" class="btn btn-secondary">Importar CSV</button>
           <button id="refreshBtn" type="button" class="btn btn-secondary">Atualizar</button>
           <button id="exportBtn" type="button" class="btn btn-secondary">Exportar CSV</button>
+          <button id="exportPdfBtn" type="button" class="btn btn-secondary">Gerar PDF dos filtros</button>
         </div>
       </div>
 
@@ -198,6 +201,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
