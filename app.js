@@ -186,7 +186,7 @@ function renderStats(rows) {
     vencidos: rows.filter(r => r.status_prazo_calculado === 'VENCIDO').length,
     noPrazo: rows.filter(r => r.status_prazo_calculado === 'NO PRAZO').length,
     venceHoje: rows.filter(r => r.status_prazo_calculado === 'VENCE HOJE').length,
-    respondidos: rows.filter(r => normalizeText(r.respondido) === 'SIM').length,
+    respondidos: rows.filter(r => r.status_prazo_calculado === 'RESPONDIDO').length,
   };
 
   els.stats.innerHTML = `
@@ -396,6 +396,31 @@ async function saveRecord() {
   setSavingState(true);
 
   try {
+    const numeroNormalizado = payload.numero_oficio.trim();
+
+    let duplicateQuery = supabaseClient
+      .from('oficios')
+      .select('id, numero_oficio')
+      .eq('numero_oficio', numeroNormalizado)
+      .limit(1);
+
+    if (els.recordId?.value) {
+      duplicateQuery = duplicateQuery.neq('id', els.recordId.value);
+    }
+
+    const duplicateResult = await duplicateQuery;
+
+    if (duplicateResult.error) {
+      showToast(`Erro ao validar duplicidade: ${duplicateResult.error.message}`);
+      console.error('[saveRecord] duplicate error', duplicateResult.error);
+      return;
+    }
+
+    if (duplicateResult.data && duplicateResult.data.length > 0) {
+      showToast('Já existe um ofício com esse número.');
+      return;
+    }
+
     let result;
 
     if (els.recordId?.value) {
@@ -553,7 +578,7 @@ function exportFilteredPdf() {
       7: { cellWidth: 55 },
       8: { cellWidth: 70 }
     },
-    didDrawPage: function (data) {
+    didDrawPage: function () {
       const pageSize = doc.internal.pageSize;
       const pageHeight = pageSize.height || pageSize.getHeight();
       doc.setFontSize(9);
