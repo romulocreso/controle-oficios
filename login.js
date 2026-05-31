@@ -5,6 +5,9 @@ const supabaseClient = window.supabase.createClient(
 );
 
 let isSignupMode = false;
+let isForgotMode = false;
+
+const SITE_URL = 'https://romulocreso.github.io/controle-oficios';
 
 function showToast(message) {
   const toast = document.getElementById('toast');
@@ -20,29 +23,49 @@ function showToast(message) {
   }, 5000);
 }
 
-function toggleMode() {
-  isSignupMode = !isSignupMode;
+function setLoginMode() {
+  isSignupMode = false;
+  isForgotMode = false;
 
-  const subtitle = document.getElementById('loginSubtitle');
-  const confirmField = document.getElementById('confirmPasswordField');
-  const submitBtn = document.getElementById('submitBtn');
-  const toggleText = document.getElementById('toggleText');
-  const toggleBtn = document.getElementById('toggleModeBtn');
-  const title = document.querySelector('.login-card h1');
+  document.getElementById('loginSubtitle').textContent = 'Faça login para acessar o sistema.';
+  document.getElementById('loginPassword').closest('label').classList.remove('hidden');
+  document.getElementById('confirmPasswordField').classList.add('hidden');
+  document.getElementById('submitBtn').textContent = 'Entrar';
+  document.getElementById('toggleText').textContent = 'Não tem conta?';
+  document.getElementById('toggleModeBtn').textContent = 'Cadastre-se';
+  document.getElementById('forgotLink').classList.remove('hidden');
+}
+
+function toggleMode() {
+  if (isForgotMode) { setLoginMode(); return; }
+
+  isSignupMode = !isSignupMode;
+  isForgotMode = false;
 
   if (isSignupMode) {
-    if (subtitle) subtitle.textContent = 'Crie sua conta para acessar o sistema.';
-    if (confirmField) confirmField.classList.remove('hidden');
-    if (submitBtn) submitBtn.textContent = 'Cadastrar';
-    if (toggleText) toggleText.textContent = 'Já tem conta?';
-    if (toggleBtn) toggleBtn.textContent = 'Faça login';
+    document.getElementById('loginSubtitle').textContent = 'Crie sua conta para acessar o sistema.';
+    document.getElementById('loginPassword').closest('label').classList.remove('hidden');
+    document.getElementById('confirmPasswordField').classList.remove('hidden');
+    document.getElementById('submitBtn').textContent = 'Cadastrar';
+    document.getElementById('toggleText').textContent = 'Já tem conta?';
+    document.getElementById('toggleModeBtn').textContent = 'Faça login';
+    document.getElementById('forgotLink').classList.add('hidden');
   } else {
-    if (subtitle) subtitle.textContent = 'Faça login para acessar o sistema.';
-    if (confirmField) confirmField.classList.add('hidden');
-    if (submitBtn) submitBtn.textContent = 'Entrar';
-    if (toggleText) toggleText.textContent = 'Não tem conta?';
-    if (toggleBtn) toggleBtn.textContent = 'Cadastre-se';
+    setLoginMode();
   }
+}
+
+function toggleForgot() {
+  isForgotMode = true;
+  isSignupMode = false;
+
+  document.getElementById('loginSubtitle').textContent = 'Informe seu e-mail para receber o link de redefinição.';
+  document.getElementById('loginPassword').closest('label').classList.add('hidden');
+  document.getElementById('confirmPasswordField').classList.add('hidden');
+  document.getElementById('submitBtn').textContent = 'Enviar link';
+  document.getElementById('toggleText').textContent = 'Lembrou a senha?';
+  document.getElementById('toggleModeBtn').textContent = 'Voltar para o login';
+  document.getElementById('forgotLink').classList.add('hidden');
 }
 
 async function login() {
@@ -111,9 +134,37 @@ async function signup() {
   }
 }
 
+async function forgotPassword() {
+  const email = document.getElementById('loginEmail')?.value.trim() || '';
+
+  if (!email) {
+    showToast('Informe seu e-mail.');
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${SITE_URL}/reset-password.html`
+    });
+
+    if (error) {
+      showToast(`Erro: ${error.message}`);
+      return;
+    }
+
+    showToast('Link enviado! Verifique sua caixa de e-mail.');
+    setLoginMode();
+  } catch (err) {
+    console.error('[forgotPassword] catch', err);
+    showToast(`Erro: ${err.message || err}`);
+  }
+}
+
 document.getElementById('loginForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (isSignupMode) {
+  if (isForgotMode) {
+    await forgotPassword();
+  } else if (isSignupMode) {
     await signup();
   } else {
     await login();
@@ -141,3 +192,5 @@ document.getElementById('loginForm')?.addEventListener('submit', async (event) =
 window.login = login;
 window.signup = signup;
 window.toggleMode = toggleMode;
+window.toggleForgot = toggleForgot;
+window.forgotPassword = forgotPassword;
