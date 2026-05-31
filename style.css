@@ -604,6 +604,29 @@ tr:hover td {
   background: linear-gradient(135deg, #1753bb, #2164d8);
 }
 
+.login-toggle {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted, #64748b);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 4px;
+  color: var(--primary, #2164d8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: #1753bb;
+}
+
 /* Coluna de link */
 #oficiosTable td:nth-child(9) {
   white-space: nowrap;

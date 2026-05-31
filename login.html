@@ -12,7 +12,7 @@
   <main class="login-page">
     <section class="login-card">
       <h1>Controle de Ofícios</h1>
-      <p class="login-subtitle">Faça login para acessar o sistema.</p>
+      <p id="loginSubtitle" class="login-subtitle">Faça login para acessar o sistema.</p>
 
       <hr class="login-divider" />
 
@@ -43,8 +43,26 @@
           </div>
         </label>
 
-        <button type="submit" class="btn btn-primary login-submit">Entrar</button>
+        <label id="confirmPasswordField" class="hidden">
+          <span>Confirmar Senha</span>
+          <div class="input-icon">
+            <span class="input-symbol">🔒</span>
+            <input
+              type="password"
+              id="loginPasswordConfirm"
+              placeholder="Repita sua senha"
+              autocomplete="new-password"
+            />
+          </div>
+        </label>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary login-submit">Entrar</button>
       </form>
+
+      <p class="login-toggle">
+        <span id="toggleText">Não tem conta?</span>
+        <button type="button" id="toggleModeBtn" class="btn-link" onclick="toggleMode()">Cadastre-se</button>
+      </p>
 
       <div id="toast" class="toast hidden"></div>
     </section>
