@@ -11,6 +11,14 @@ let currentUser = null;
 let isSaving = false;
 let isLoadingRows = false;
 
+// Paginação
+let currentPage = 1;
+const PAGE_SIZE = 20;
+
+// Ordenação
+let sortColumn = null;
+let sortDirection = 'asc';
+
 const els = {
   logoutBtn: document.getElementById('logoutBtn'),
   authStatus: document.getElementById('authStatus'),
@@ -25,6 +33,7 @@ const els = {
   recebidoFilter: document.getElementById('recebidoFilter'),
   respondidoFilter: document.getElementById('respondidoFilter'),
   tableBody: document.querySelector('#oficiosTable tbody'),
+  tableHead: document.querySelector('#oficiosTable thead tr'),
   stats: document.getElementById('stats'),
   toast: document.getElementById('toast'),
   recordId: document.getElementById('recordId'),
@@ -38,7 +47,8 @@ const els = {
   dataResposta: document.getElementById('data_resposta'),
   linkOficio: document.getElementById('link_oficio'),
   observacoes: document.getElementById('observacoes'),
-  saveBtn: document.getElementById('saveBtn')
+  saveBtn: document.getElementById('saveBtn'),
+  pagination: document.getElementById('pagination')
 };
 
 function bind(el, event, handler) {
@@ -160,14 +170,113 @@ function getFilteredRows() {
   });
 }
 
-function getRowsForPdf() {
-  const rows = getFilteredRows();
+// --- ORDENAÇÃO ---
 
-  return rows.filter(row =>
-    row.status_prazo_calculado === 'VENCIDO' ||
-    normalizeText(row.respondido) !== 'SIM'
-  );
+const SORT_KEYS = {
+  0: 'numero_oficio',
+  1: 'recebido',
+  2: 'data_recebimento',
+  3: 'prazo_resposta_dias',
+  4: 'data_limite_resposta',
+  5: 'respondido',
+  6: 'status_prazo_calculado',
+  7: 'observacoes',
+  8: 'link_oficio'
+};
+
+function sortRows(rows) {
+  if (!sortColumn) return rows;
+  const key = SORT_KEYS[sortColumn];
+  if (!key) return rows;
+
+  return [...rows].sort((a, b) => {
+    let av = a[key] ?? '';
+    let bv = b[key] ?? '';
+
+    // Datas: comparar como string ISO (já estão em YYYY-MM-DD)
+    if (key.startsWith('data_') || key === 'created_at') {
+      av = av || '';
+      bv = bv || '';
+    } else if (key === 'prazo_resposta_dias') {
+      av = Number(av) || 0;
+      bv = Number(bv) || 0;
+    } else {
+      av = String(av).toLowerCase();
+      bv = String(bv).toLowerCase();
+    }
+
+    if (av < bv) return sortDirection === 'asc' ? -1 : 1;
+    if (av > bv) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 }
+
+function updateSortIndicators() {
+  if (!els.tableHead) return;
+  const ths = els.tableHead.querySelectorAll('th[data-col]');
+  ths.forEach(th => {
+    const col = Number(th.dataset.col);
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (col === sortColumn) {
+      th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function onSortClick(colIndex) {
+  if (sortColumn === colIndex) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = colIndex;
+    sortDirection = 'asc';
+  }
+  currentPage = 1;
+  updateSortIndicators();
+  render();
+}
+
+// --- PAGINAÇÃO ---
+
+function renderPagination(totalRows) {
+  const container = els.pagination;
+  if (!container) return;
+
+  const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
+
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pages.push(
+      `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`
+    );
+  }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, totalRows);
+
+  container.innerHTML = `
+    <div class="pagination-info">Exibindo ${start}–${end} de ${totalRows} registros</div>
+    <div class="pagination-btns">
+      <button type="button" class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo;</button>
+      ${pages.join('')}
+      <button type="button" class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>&raquo;</button>
+    </div>
+  `;
+}
+
+window.goToPage = function(page) {
+  const filtered = getFilteredRows();
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  render();
+};
+
+// --- STATS ---
 
 function renderStats(rows) {
   if (!els.stats) return;
@@ -202,10 +311,16 @@ function renderStats(rows) {
   if (summaryVencidos) summaryVencidos.textContent = stats.vencidos;
 }
 
+// --- TABELA ---
+
 function renderTable(rows) {
   if (!els.tableBody) return;
 
-  els.tableBody.innerHTML = rows.map(row => `
+  const sorted = sortRows(rows);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = sorted.slice(start, start + PAGE_SIZE);
+
+  els.tableBody.innerHTML = pageRows.map(row => `
     <tr>
       <td>${escapeHtml(row.numero_oficio || '')}</td>
       <td>${escapeHtml(row.recebido || '')}</td>
@@ -229,6 +344,8 @@ function renderTable(rows) {
       </td>
     </tr>
   `).join('');
+
+  renderPagination(rows.length);
 }
 
 function render() {
@@ -236,6 +353,8 @@ function render() {
   renderStats(rows);
   renderTable(rows);
 }
+
+// --- CARREGAMENTO ---
 
 async function loadRows(force = false) {
   if (!currentUser) {
@@ -245,7 +364,6 @@ async function loadRows(force = false) {
   }
 
   if (isLoadingRows && !force) return;
-
   isLoadingRows = true;
 
   try {
@@ -262,6 +380,7 @@ async function loadRows(force = false) {
 
     allRows = (result.data || []).map(enrichRow);
     fillStatusFilter(allRows);
+    currentPage = 1;
     render();
   } catch (err) {
     showToast(`Erro ao carregar: ${err.message || err}`);
@@ -271,17 +390,15 @@ async function loadRows(force = false) {
   }
 }
 
+// --- FORMULÁRIO ---
+
 function autoFillDeadline() {
   if (!els.dataRecebimento || !els.prazoDias || !els.dataLimite) return;
-
   const dataRecebimento = els.dataRecebimento.value;
   const prazo = Number(els.prazoDias.value || 0);
-
   if (!dataRecebimento || !(prazo > 0)) return;
-
   const base = parseDate(dataRecebimento);
   if (!base) return;
-
   els.dataLimite.value = addDays(base, prazo).toISOString().slice(0, 10);
 }
 
@@ -348,21 +465,15 @@ window.deleteRow = async function(id) {
     showToast('Faça login para excluir.');
     return;
   }
-
   if (!confirm('Deseja excluir este registro?')) return;
 
   try {
-    const result = await supabaseClient
-      .from('oficios')
-      .delete()
-      .eq('id', id);
-
+    const result = await supabaseClient.from('oficios').delete().eq('id', id);
     if (result.error) {
       showToast(`Erro ao excluir: ${result.error.message}`);
       console.error('[deleteRow]', result.error);
       return;
     }
-
     showToast('Registro excluído.');
     await loadRows(true);
   } catch (err) {
@@ -373,14 +484,12 @@ window.deleteRow = async function(id) {
 
 async function saveRecord() {
   if (isSaving) return;
-
   if (!currentUser) {
     showToast('Faça login para salvar.');
     return;
   }
 
   const payload = formData();
-
   if (!payload.numero_oficio) {
     showToast('Informe o número do ofício.');
     return;
@@ -405,7 +514,6 @@ async function saveRecord() {
 
     if (duplicateResult.error) {
       showToast(`Erro ao validar duplicidade: ${duplicateResult.error.message}`);
-      console.error('[saveRecord] duplicate error', duplicateResult.error);
       return;
     }
 
@@ -415,16 +523,10 @@ async function saveRecord() {
     }
 
     let result;
-
     if (els.recordId?.value) {
-      result = await supabaseClient
-        .from('oficios')
-        .update(payload)
-        .eq('id', els.recordId.value);
+      result = await supabaseClient.from('oficios').update(payload).eq('id', els.recordId.value);
     } else {
-      result = await supabaseClient
-        .from('oficios')
-        .insert([payload]);
+      result = await supabaseClient.from('oficios').insert([payload]);
     }
 
     if (result.error) {
@@ -444,20 +546,18 @@ async function saveRecord() {
   }
 }
 
+// --- AUTENTICAÇÃO ---
+
 async function logout() {
   try {
     const { error } = await supabaseClient.auth.signOut();
-
     if (error) {
       showToast(`Erro ao sair: ${error.message}`);
-      console.error('[logout]', error);
       return;
     }
-
     window.location.href = 'login.html';
   } catch (err) {
     showToast(`Erro ao sair: ${err.message || err}`);
-    console.error('[logout] catch', err);
   }
 }
 
@@ -469,6 +569,8 @@ async function applyAuthState() {
   }
 }
 
+// --- EXPORTAÇÃO CSV ---
+
 function csvEscape(value) {
   const s = String(value);
   return /[",\n]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
@@ -477,17 +579,9 @@ function csvEscape(value) {
 function exportFilteredCsv() {
   const rows = getFilteredRows();
   const headers = [
-    'id',
-    'numero_oficio',
-    'recebido',
-    'data_recebimento',
-    'prazo_resposta_dias',
-    'data_limite_resposta',
-    'respondido',
-    'data_resposta',
-    'link_oficio',
-    'observacoes',
-    'status_prazo_calculado'
+    'id', 'numero_oficio', 'recebido', 'data_recebimento', 'prazo_resposta_dias',
+    'data_limite_resposta', 'respondido', 'data_resposta', 'link_oficio',
+    'observacoes', 'status_prazo_calculado'
   ];
 
   const csv = [
@@ -504,26 +598,26 @@ function exportFilteredCsv() {
   URL.revokeObjectURL(url);
 }
 
+// --- EXPORTAÇÃO PDF ---
+
 function exportFilteredPdf() {
-  const rows = getRowsForPdf();
+  // Exporta todos os registros filtrados (não só vencidos/não respondidos)
+  const rows = getFilteredRows();
 
   if (!rows.length) {
-    showToast('Não há registros vencidos ou não respondidos para gerar PDF.');
+    showToast('Não há registros para gerar PDF.');
     return;
   }
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('l', 'mm', 'a4');
-
-  const titulo = 'Relatório de Ofícios';
   const dataGeracao = new Date().toLocaleString('pt-BR');
 
   doc.setFontSize(16);
-  doc.text(titulo, 14, 14);
-
+  doc.text('Relatório de Ofícios', 14, 14);
   doc.setFontSize(10);
   doc.text(`Emitido em: ${dataGeracao}`, 14, 22);
-  doc.text('Critério: registros vencidos e/ou não respondidos', 14, 28);
+  doc.text(`Total de registros: ${rows.length}`, 14, 28);
 
   const body = rows.map(row => [
     row.numero_oficio || '',
@@ -539,26 +633,10 @@ function exportFilteredPdf() {
 
   doc.autoTable({
     startY: 34,
-    head: [[
-      'Número',
-      'Recebido',
-      'Recebimento',
-      'Prazo',
-      'Data Limite',
-      'Respondido',
-      'Status',
-      'Observações',
-      'Link'
-    ]],
+    head: [['Número', 'Recebido', 'Recebimento', 'Prazo', 'Data Limite', 'Respondido', 'Status', 'Observações', 'Link']],
     body,
-    styles: {
-      fontSize: 8,
-      cellPadding: 2,
-      overflow: 'linebreak'
-    },
-    headStyles: {
-      fillColor: [33, 100, 216]
-    },
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: { fillColor: [33, 100, 216] },
     columnStyles: {
       0: { cellWidth: 38 },
       1: { cellWidth: 18 },
@@ -569,12 +647,6 @@ function exportFilteredPdf() {
       6: { cellWidth: 25 },
       7: { cellWidth: 55 },
       8: { cellWidth: 70 }
-    },
-    didDrawPage: function () {
-      const pageSize = doc.internal.pageSize;
-      const pageHeight = pageSize.height || pageSize.getHeight();
-      doc.setFontSize(9);
-      doc.text(`Total de registros: ${rows.length}`, 14, pageHeight - 8);
     }
   });
 
@@ -582,66 +654,41 @@ function exportFilteredPdf() {
   doc.save(nomeArquivo);
 }
 
+// --- IMPORTAÇÃO CSV ---
+
 function normalizeHeader(value) {
-  return (value || '')
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
+  return (value || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
 function csvToObjects(text) {
   const rows = [];
-  let row = [];
-  let value = '';
-  let insideQuotes = false;
+  let row = [], value = '', insideQuotes = false;
 
   for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
-
+    const char = text[i], next = text[i + 1];
     if (char === '"') {
-      if (insideQuotes && next === '"') {
-        value += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
+      if (insideQuotes && next === '"') { value += '"'; i++; }
+      else insideQuotes = !insideQuotes;
     } else if (char === ',' && !insideQuotes) {
-      row.push(value);
-      value = '';
+      row.push(value); value = '';
     } else if ((char === '\n' || char === '\r') && !insideQuotes) {
       if (char === '\r' && next === '\n') i++;
-      if (value !== '' || row.length) {
-        row.push(value);
-        rows.push(row);
-        row = [];
-        value = '';
-      }
+      if (value !== '' || row.length) { row.push(value); rows.push(row); row = []; value = ''; }
     } else {
       value += char;
     }
   }
-
-  if (value !== '' || row.length) {
-    row.push(value);
-    rows.push(row);
-  }
-
+  if (value !== '' || row.length) { row.push(value); rows.push(row); }
   if (!rows.length) return [];
 
-  const headers = rows.shift().map(h => normalizeHeader(h.replace(/^\uFEFF/, '')));
-
+  const headers = rows.shift().map(h => normalizeHeader(h.replace(/^﻿/, '')));
   return rows
     .filter(cols => cols.some(c => String(c || '').trim() !== ''))
     .map(cols => {
       const obj = {};
-      headers.forEach((h, idx) => {
-        obj[h] = (cols[idx] || '').trim();
-      });
+      headers.forEach((h, idx) => { obj[h] = (cols[idx] || '').trim(); });
       return obj;
     });
 }
@@ -649,9 +696,7 @@ function csvToObjects(text) {
 function pickValue(row, aliases) {
   for (const alias of aliases) {
     const key = normalizeHeader(alias);
-    if (row[key] !== undefined && row[key] !== '') {
-      return row[key];
-    }
+    if (row[key] !== undefined && row[key] !== '') return row[key];
   }
   return '';
 }
@@ -659,65 +704,26 @@ function pickValue(row, aliases) {
 function normalizeDateToISO(value) {
   if (!value) return null;
   const raw = String(value).trim();
-
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-
   const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (br) {
-    const [, dd, mm, yyyy] = br;
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
+  if (br) { const [, dd, mm, yyyy] = br; return `${yyyy}-${mm}-${dd}`; }
   return raw;
 }
 
 function normalizeImportedRow(row) {
   return {
-    numero_oficio: pickValue(row, [
-      'numero_oficio',
-      'numero do oficio',
-      'número do ofício',
-      'numero',
-      'número',
-      'oficio',
-      'ofício',
-      'n_oficio'
-    ]) || null,
+    numero_oficio: pickValue(row, ['numero_oficio', 'numero do oficio', 'número do ofício', 'numero', 'número', 'oficio', 'ofício', 'n_oficio']) || null,
     recebido: normalizeText(pickValue(row, ['recebido'])) || null,
-    data_recebimento: normalizeDateToISO(pickValue(row, [
-      'data_recebimento',
-      'recebimento',
-      'data de recebimento'
-    ])) || null,
+    data_recebimento: normalizeDateToISO(pickValue(row, ['data_recebimento', 'recebimento', 'data de recebimento'])) || null,
     prazo_resposta_dias: (() => {
       const v = pickValue(row, ['prazo_resposta_dias', 'prazo', 'prazo dias', 'dias']);
       return v ? Number(String(v).replace(/[^\d-]/g, '')) : null;
     })(),
-    data_limite_resposta: normalizeDateToISO(pickValue(row, [
-      'data_limite_resposta',
-      'data_limite',
-      'data limite'
-    ])) || null,
+    data_limite_resposta: normalizeDateToISO(pickValue(row, ['data_limite_resposta', 'data_limite', 'data limite'])) || null,
     respondido: normalizeText(pickValue(row, ['respondido'])) || null,
-    data_resposta: normalizeDateToISO(pickValue(row, [
-      'data_resposta',
-      'resposta',
-      'data da resposta'
-    ])) || null,
-    link_oficio: pickValue(row, [
-      'link_oficio',
-      'link do oficio',
-      'link do ofício',
-      'link',
-      'url'
-    ]) || null,
-    observacoes: pickValue(row, [
-      'observacoes',
-      'observação',
-      'observacao',
-      'observações',
-      'obs'
-    ]) || null,
+    data_resposta: normalizeDateToISO(pickValue(row, ['data_resposta', 'resposta', 'data da resposta'])) || null,
+    link_oficio: pickValue(row, ['link_oficio', 'link do oficio', 'link do ofício', 'link', 'url']) || null,
+    observacoes: pickValue(row, ['observacoes', 'observação', 'observacao', 'observações', 'obs']) || null,
   };
 }
 
@@ -736,11 +742,7 @@ function cleanImportedPayload(row) {
 
   if (!payload.data_limite_resposta && payload.data_recebimento && payload.prazo_resposta_dias > 0) {
     const base = parseDate(payload.data_recebimento);
-    if (base) {
-      payload.data_limite_resposta = addDays(base, payload.prazo_resposta_dias)
-        .toISOString()
-        .slice(0, 10);
-    }
+    if (base) payload.data_limite_resposta = addDays(base, payload.prazo_resposta_dias).toISOString().slice(0, 10);
   }
 
   return payload;
@@ -763,30 +765,53 @@ async function importCsvFile(file) {
   const payloads = parsedRows
     .map(normalizeImportedRow)
     .map(cleanImportedPayload)
-    .filter(row =>
-      row.numero_oficio ||
-      row.data_recebimento ||
-      row.prazo_resposta_dias ||
-      row.data_limite_resposta ||
-      row.link_oficio ||
-      row.observacoes
-    );
+    .filter(row => row.numero_oficio || row.data_recebimento || row.prazo_resposta_dias || row.data_limite_resposta || row.link_oficio || row.observacoes);
 
   if (!payloads.length) {
     showToast('Nenhum dado aproveitável encontrado no CSV.');
     return;
   }
 
-  try {
-    const result = await supabaseClient.from('oficios').insert(payloads);
+  // Verificar duplicidades: buscar números já existentes no banco
+  const numerosImport = payloads.map(p => p.numero_oficio).filter(Boolean);
+  let existentes = new Set();
 
+  if (numerosImport.length > 0) {
+    try {
+      const { data: existData } = await supabaseClient
+        .from('oficios')
+        .select('numero_oficio')
+        .in('numero_oficio', numerosImport);
+
+      if (existData) {
+        existentes = new Set(existData.map(r => r.numero_oficio));
+      }
+    } catch (err) {
+      console.error('[importCsvFile] verificação de duplicatas', err);
+    }
+  }
+
+  const novos = payloads.filter(p => !p.numero_oficio || !existentes.has(p.numero_oficio));
+  const duplicados = payloads.length - novos.length;
+
+  if (!novos.length) {
+    showToast(`Todos os ${duplicados} registro(s) do CSV já existem no banco.`);
+    return;
+  }
+
+  try {
+    const result = await supabaseClient.from('oficios').insert(novos);
     if (result.error) {
       showToast(`Erro ao importar CSV: ${result.error.message}`);
       console.error('[importCsvFile]', result.error);
       return;
     }
 
-    showToast(`${payloads.length} registro(s) importado(s).`);
+    const msg = duplicados > 0
+      ? `${novos.length} registro(s) importado(s). ${duplicados} duplicata(s) ignorada(s).`
+      : `${novos.length} registro(s) importado(s).`;
+
+    showToast(msg);
     await loadRows(true);
   } catch (err) {
     showToast(`Erro ao importar CSV: ${err.message || err}`);
@@ -794,16 +819,30 @@ async function importCsvFile(file) {
   }
 }
 
-bind(els.searchInput, 'input', render);
-bind(els.statusFilter, 'change', render);
-bind(els.recebidoFilter, 'change', render);
-bind(els.respondidoFilter, 'change', render);
+// --- INICIALIZAÇÃO DOS CABEÇALHOS ORDENÁVEIS ---
+
+function initSortableHeaders() {
+  if (!els.tableHead) return;
+  const ths = els.tableHead.querySelectorAll('th');
+  ths.forEach((th, idx) => {
+    if (SORT_KEYS[idx]) {
+      th.dataset.col = idx;
+      th.classList.add('sortable');
+      th.addEventListener('click', () => onSortClick(idx));
+    }
+  });
+}
+
+// --- EVENTOS ---
+
+bind(els.searchInput, 'input', () => { currentPage = 1; render(); });
+bind(els.statusFilter, 'change', () => { currentPage = 1; render(); });
+bind(els.recebidoFilter, 'change', () => { currentPage = 1; render(); });
+bind(els.respondidoFilter, 'change', () => { currentPage = 1; render(); });
 bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
 bind(els.exportPdfBtn, 'click', exportFilteredPdf);
-bind(els.importBtn, 'click', () => {
-  els.csvFileInput?.click();
-});
+bind(els.importBtn, 'click', () => els.csvFileInput?.click());
 bind(els.csvFileInput, 'change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -819,12 +858,10 @@ window.resetForm = resetForm;
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   currentUser = session?.user || null;
-
   if (!currentUser && event === 'SIGNED_OUT') {
     window.location.href = 'login.html';
     return;
   }
-
   await applyAuthState();
 });
 
@@ -842,5 +879,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 
   await applyAuthState();
+  initSortableHeaders();
   await loadRows(true);
 })();

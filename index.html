@@ -4,191 +4,175 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle de Ofícios</title>
-  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="topbar-left">
+    <div>
       <h1>Controle de Ofícios</h1>
-      <p class="subtitle">Gerencie e acompanhe seus ofícios.</p>
-      <p id="authStatus" class="auth-status">Carregando sessão...</p>
+      <p class="subtitle">Cadastro, conferência humana e controle de prazo</p>
     </div>
-
     <div class="topbar-actions">
-      <button id="logoutBtn" type="button" class="btn btn-secondary" onclick="logout()">Sair</button>
+      <button id="showLoginBtn" class="secondary">Entrar</button>
+      <button id="logoutBtn" class="secondary hidden">Sair</button>
     </div>
   </header>
 
   <main class="page">
-    <section class="summary-strip">
-      <div class="summary-card blue">
-        <div class="summary-label">Total de Ofícios</div>
-        <div class="summary-value" id="summaryTotal">0</div>
+    <section id="loginSection" class="panel hidden">
+      <h2>Acesso</h2>
+      <div class="grid two">
+        <label>
+          <span>Email</span>
+          <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" />
+        </label>
+        <label>
+          <span>Senha</span>
+          <input type="password" id="loginPassword" placeholder="********" />
+        </label>
       </div>
-
-      <div class="summary-card green">
-        <div class="summary-label">No Prazo</div>
-        <div class="summary-value" id="summaryNoPrazo">0</div>
-      </div>
-
-      <div class="summary-card yellow">
-        <div class="summary-label">Vence Hoje</div>
-        <div class="summary-value" id="summaryVenceHoje">0</div>
-      </div>
-
-      <div class="summary-card red">
-        <div class="summary-label">Vencidos</div>
-        <div class="summary-value" id="summaryVencidos">0</div>
+      <div class="actions">
+        <button id="loginBtn">Entrar</button>
       </div>
     </section>
 
-    <section class="panel form-panel">
-      <div class="panel-header">
-        <div>
-          <h2>Novo Registro</h2>
-          <p class="panel-subtitle">Cadastre ou edite os dados do ofício.</p>
-        </div>
+    <section class="panel">
+      <div class="section-head">
+        <h2>Novo / Editar Ofício</h2>
         <span id="editingBadge" class="badge neutral hidden">Editando registro</span>
       </div>
 
-      <form id="oficioForm" class="form-card">
+      <form id="oficioForm" class="grid three">
         <input type="hidden" id="recordId" />
 
-        <div class="grid two">
-          <label>
-            <span>Número do Ofício</span>
-            <input type="text" id="numero_oficio" />
-          </label>
+        <label>
+          <span>Número do ofício</span>
+          <input type="text" id="numero_oficio" required />
+        </label>
 
-          <label>
-            <span>Recebido</span>
-            <select id="recebido">
-              <option value="">Selecione</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
-          </label>
+        <label>
+          <span>Unidade</span>
+          <input type="text" id="unidade" />
+        </label>
 
-          <label>
-            <span>Data de Recebimento</span>
-            <input type="date" id="data_recebimento" />
-          </label>
+        <label>
+          <span>Classe</span>
+          <input type="text" id="classe" />
+        </label>
 
-          <label>
-            <span>Prazo de Resposta (dias)</span>
-            <input type="number" min="0" id="prazo_resposta_dias" />
-          </label>
+        <label>
+          <span>Recebido</span>
+          <select id="recebido">
+            <option value="">Selecione</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
 
-          <label>
-            <span>Data Limite</span>
-            <input type="date" id="data_limite_resposta" />
-          </label>
+        <label>
+          <span>Data de recebimento</span>
+          <input type="date" id="data_recebimento" />
+        </label>
 
-          <label>
-            <span>Respondido</span>
-            <select id="respondido">
-              <option value="">Selecione</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
-          </label>
+        <label>
+          <span>Prazo para resposta (dias)</span>
+          <input type="number" min="0" id="prazo_resposta_dias" />
+        </label>
 
-          <label>
-            <span>Data da Resposta</span>
-            <input type="date" id="data_resposta" />
-          </label>
+        <label>
+          <span>Data limite</span>
+          <input type="date" id="data_limite_resposta" />
+        </label>
 
-          <label class="full">
-            <span>Link do Ofício</span>
-            <input
-              type="url"
-              id="link_oficio"
-              placeholder="https://mpe.mpmg.mp.br/editar?extrajudicial=..."
-            />
-          </label>
+        <label>
+          <span>Respondido</span>
+          <select id="respondido">
+            <option value="">Selecione</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
 
-          <label class="full">
-            <span>Observações</span>
-            <textarea id="observacoes" rows="4"></textarea>
-          </label>
-        </div>
+        <label>
+          <span>Data da resposta</span>
+          <input type="date" id="data_resposta" />
+        </label>
 
-        <div class="actions centered">
-          <button id="saveBtn" type="button" class="btn btn-primary" onclick="saveRecord()">Salvar Registro</button>
-          <button id="clearBtn" type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
-        </div>
+        <label class="full">
+          <span>Observações</span>
+          <textarea id="observacoes" rows="3"></textarea>
+        </label>
+
+        <label>
+          <span>Origem</span>
+          <input type="text" id="origem_arquivo" placeholder="ex.: protocolo interno" />
+        </label>
       </form>
+
+      <div class="actions">
+        <button id="saveBtn">Salvar</button>
+        <button id="clearBtn" class="secondary">Limpar</button>
+      </div>
     </section>
 
-    <section class="panel table-panel">
-      <div class="panel-header">
-        <div>
-          <h2>Ofícios Cadastrados</h2>
-          <p class="panel-subtitle">Consulte, filtre e acompanhe os registros cadastrados.</p>
-        </div>
-
-        <div class="actions inline no-margin">
-          <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
-          <button id="importBtn" type="button" class="btn btn-secondary">Importar CSV</button>
-          <button id="refreshBtn" type="button" class="btn btn-secondary">Atualizar</button>
-          <button id="exportBtn" type="button" class="btn btn-secondary">Exportar CSV</button>
-          <button id="exportPdfBtn" type="button" class="btn btn-secondary">Gerar PDF</button>
+    <section class="panel">
+      <div class="section-head">
+        <h2>Filtros e conferência</h2>
+        <div class="actions inline">
+          <button id="refreshBtn" class="secondary">Atualizar</button>
+          <button id="exportBtn" class="secondary">Exportar CSV</button>
         </div>
       </div>
 
-      <div class="filter-bar">
-        <div class="grid four">
-          <label>
-            <span>Busca</span>
-            <input type="text" id="searchInput" placeholder="número, observações" />
-          </label>
-
-          <label>
-            <span>Status</span>
-            <select id="statusFilter">
-              <option value="">Todos</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Recebido</span>
-            <select id="recebidoFilter">
-              <option value="">Todos</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Respondido</span>
-            <select id="respondidoFilter">
-              <option value="">Todos</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
-          </label>
-        </div>
+      <div class="grid four">
+        <label>
+          <span>Busca</span>
+          <input type="text" id="searchInput" placeholder="número, unidade, classe, observações" />
+        </label>
+        <label>
+          <span>Status</span>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+          </select>
+        </label>
+        <label>
+          <span>Recebido</span>
+          <select id="recebidoFilter">
+            <option value="">Todos</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
+        <label>
+          <span>Respondido</span>
+          <select id="respondidoFilter">
+            <option value="">Todos</option>
+            <option value="SIM">SIM</option>
+            <option value="NAO">NAO</option>
+          </select>
+        </label>
       </div>
 
       <div id="stats" class="stats"></div>
+
+      <div id="pagination" class="pagination"></div>
 
       <div class="table-wrap">
         <table id="oficiosTable">
           <thead>
             <tr>
               <th>Número</th>
+              <th>Unidade</th>
+              <th>Classe</th>
               <th>Recebido</th>
               <th>Recebimento</th>
               <th>Prazo</th>
-              <th>Data Limite</th>
+              <th>Data limite</th>
               <th>Respondido</th>
               <th>Status</th>
               <th>Observações</th>
-              <th>Link</th>
+              <th>Origem</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -201,6 +185,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js"></script>
 </body>
 </html>
