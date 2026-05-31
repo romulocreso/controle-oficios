@@ -460,7 +460,8 @@ tr:hover td {
 }
 
 .badge.RESPONDIDO,
-.badge.NO\ PRAZO {
+.badge.NO\ PRAZO,
+.badge.AGUARDANDO {
   background: var(--success-bg);
   color: var(--success-text);
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controle de Ofícios</title>
+  <title>Controle de Ofícios Expedidos</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,13 +13,13 @@
 <body>
   <header class="topbar">
     <div class="topbar-left">
-      <h1>Controle de Ofícios</h1>
-      <p class="subtitle">Gerencie e acompanhe seus ofícios.</p>
+      <h1>Ofícios Expedidos</h1>
+      <p class="subtitle">Gerencie e acompanhe os ofícios enviados.</p>
       <p id="authStatus" class="auth-status">Carregando sessão...</p>
     </div>
 
     <div class="topbar-actions">
-      <a href="expedidos.html" class="btn btn-secondary">Ofícios Expedidos</a>
+      <a href="index.html" class="btn btn-secondary">Ofícios Recebidos</a>
       <button id="logoutBtn" type="button" class="btn btn-secondary" onclick="logout()">Sair</button>
     </div>
   </header>
@@ -32,8 +32,8 @@
       </div>
 
       <div class="summary-card green">
-        <div class="summary-label">No Prazo</div>
-        <div class="summary-value" id="summaryNoPrazo">0</div>
+        <div class="summary-label">Aguardando</div>
+        <div class="summary-value" id="summaryAguardando">0</div>
       </div>
 
       <div class="summary-card yellow">
@@ -51,7 +51,7 @@
       <div class="panel-header">
         <div>
           <h2>Novo Registro</h2>
-          <p class="panel-subtitle">Cadastre ou edite os dados do ofício.</p>
+          <p class="panel-subtitle">Cadastre ou edite os dados do ofício expedido.</p>
         </div>
         <span id="editingBadge" class="badge neutral hidden">Editando registro</span>
       </div>
@@ -66,17 +66,13 @@
           </label>
 
           <label>
-            <span>Recebido</span>
-            <select id="recebido">
-              <option value="">Selecione</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
+            <span>Destinatário</span>
+            <input type="text" id="destinatario" placeholder="Nome ou órgão destinatário" />
           </label>
 
           <label>
-            <span>Data de Recebimento</span>
-            <input type="date" id="data_recebimento" />
+            <span>Data de Expedição</span>
+            <input type="date" id="data_expedicao" />
           </label>
 
           <label>
@@ -90,8 +86,8 @@
           </label>
 
           <label>
-            <span>Respondido</span>
-            <select id="respondido">
+            <span>Resposta Recebida</span>
+            <select id="resposta_recebida">
               <option value="">Selecione</option>
               <option value="SIM">SIM</option>
               <option value="NAO">NAO</option>
@@ -128,7 +124,7 @@
     <section class="panel table-panel">
       <div class="panel-header">
         <div>
-          <h2>Ofícios Cadastrados</h2>
+          <h2>Ofícios Expedidos Cadastrados</h2>
           <p class="panel-subtitle">Consulte, filtre e acompanhe os registros cadastrados.</p>
         </div>
 
@@ -145,7 +141,7 @@
         <div class="grid four">
           <label>
             <span>Busca</span>
-            <input type="text" id="searchInput" placeholder="número, observações" />
+            <input type="text" id="searchInput" placeholder="número, destinatário, observações" />
           </label>
 
           <label>
@@ -156,17 +152,8 @@
           </label>
 
           <label>
-            <span>Recebido</span>
-            <select id="recebidoFilter">
-              <option value="">Todos</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NAO</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Respondido</span>
-            <select id="respondidoFilter">
+            <span>Resposta Recebida</span>
+            <select id="respostaFilter">
               <option value="">Todos</option>
               <option value="SIM">SIM</option>
               <option value="NAO">NAO</option>
@@ -182,11 +169,11 @@
           <thead>
             <tr>
               <th>Número</th>
-              <th>Recebido</th>
-              <th>Recebimento</th>
+              <th>Destinatário</th>
+              <th>Expedição</th>
               <th>Prazo</th>
               <th>Data Limite</th>
-              <th>Respondido</th>
+              <th>Resposta</th>
               <th>Status</th>
               <th>Observações</th>
               <th>Link</th>
@@ -202,6 +189,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=22"></script>
+  <script src="expedidos.js?v=1"></script>
 </body>
 </html>
