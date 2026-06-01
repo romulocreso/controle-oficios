@@ -10,6 +10,8 @@ let allRows = [];
 let currentUser = null;
 let isSaving = false;
 let isLoadingRows = false;
+let currentPage = 1;
+let rowsPerPage = 20;
 
 const els = {
   logoutBtn: document.getElementById('logoutBtn'),
@@ -192,10 +194,68 @@ function renderStats(rows) {
   if (summaryVencidos) summaryVencidos.textContent = stats.vencidos;
 }
 
+function getPaginationPages(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (current > 3) pages.push('...');
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+  if (current < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+}
+
+function renderPagination(totalRows) {
+  const bar = document.getElementById('paginationBar');
+  if (!bar) return;
+  if (totalRows === 0) { bar.innerHTML = ''; return; }
+
+  const totalPages = Math.ceil(totalRows / rowsPerPage);
+  const start = Math.min((currentPage - 1) * rowsPerPage + 1, totalRows);
+  const end = Math.min(currentPage * rowsPerPage, totalRows);
+
+  const pageButtons = getPaginationPages(currentPage, totalPages).map(p =>
+    p === '...'
+      ? `<span class="pagination-ellipsis">…</span>`
+      : `<button type="button" class="pagination-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`
+  ).join('');
+
+  bar.innerHTML = `
+    <div class="pagination-info">
+      Mostrando ${start}–${end} de ${totalRows}
+      <label class="pagination-per-page">Por página:
+        <select onchange="setRowsPerPage(Number(this.value))">
+          ${[10, 20, 50].map(n => `<option value="${n}"${n === rowsPerPage ? ' selected' : ''}>${n}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <div class="pagination-controls">
+      <button type="button" class="pagination-btn" onclick="goToPage(${currentPage - 1})"${currentPage === 1 ? ' disabled' : ''}>‹ Anterior</button>
+      ${pageButtons}
+      <button type="button" class="pagination-btn" onclick="goToPage(${currentPage + 1})"${currentPage === totalPages ? ' disabled' : ''}>Próximo ›</button>
+    </div>
+  `;
+}
+
+window.goToPage = function(page) {
+  const totalPages = Math.ceil(getFilteredRows().length / rowsPerPage);
+  currentPage = Math.max(1, Math.min(page, totalPages));
+  render();
+  document.querySelector('.table-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.setRowsPerPage = function(n) {
+  rowsPerPage = n;
+  currentPage = 1;
+  render();
+};
+
 function renderTable(rows) {
   if (!els.tableBody) return;
 
-  els.tableBody.innerHTML = rows.map(row => `
+  const start = (currentPage - 1) * rowsPerPage;
+  const pageRows = rows.slice(start, start + rowsPerPage);
+
+  els.tableBody.innerHTML = pageRows.map(row => `
     <tr>
       <td>${escapeHtml(row.numero_oficio || '')}</td>
       <td>${escapeHtml(row.destinatario || '')}</td>
@@ -219,6 +279,8 @@ function renderTable(rows) {
       </td>
     </tr>
   `).join('');
+
+  renderPagination(rows.length);
 }
 
 function render() {
@@ -795,9 +857,10 @@ async function importCsvFile(file) {
   }
 }
 
-bind(els.searchInput, 'input', render);
-bind(els.statusFilter, 'change', render);
-bind(els.respostaFilter, 'change', render);
+function resetPageAndRender() { currentPage = 1; render(); }
+bind(els.searchInput, 'input', resetPageAndRender);
+bind(els.statusFilter, 'change', resetPageAndRender);
+bind(els.respostaFilter, 'change', resetPageAndRender);
 bind(els.refreshBtn, 'click', () => loadRows(true));
 bind(els.exportBtn, 'click', exportFilteredCsv);
 bind(els.exportPdfBtn, 'click', exportFilteredPdf);
