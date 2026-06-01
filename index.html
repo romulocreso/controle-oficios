@@ -181,7 +181,7 @@
         <table id="oficiosTable">
           <thead>
             <tr>
-              <th>Número</th>
+              <th class="sortable" onclick="toggleSortNumero()">Número <span id="sortNumeroArrow" class="sort-arrow"></span></th>
               <th>Recebido</th>
               <th>Recebimento</th>
               <th>Prazo</th>
@@ -204,6 +204,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

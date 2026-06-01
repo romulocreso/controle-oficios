@@ -168,7 +168,7 @@
         <table id="oficiosTable">
           <thead>
             <tr>
-              <th>Número</th>
+              <th class="sortable" onclick="toggleSortNumero()">Número <span id="sortNumeroArrow" class="sort-arrow"></span></th>
               <th>Destinatário</th>
               <th>Expedição</th>
               <th>Prazo</th>
@@ -191,6 +191,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="config.js"></script>
-  <script src="expedidos.js?v=1"></script>
+  <script src="expedidos.js?v=2"></script>
 </body>
 </html>

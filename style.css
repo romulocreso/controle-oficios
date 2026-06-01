@@ -424,6 +424,20 @@ th {
   white-space: nowrap;
 }
 
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable:hover {
+  color: #2164d8;
+}
+
+.sort-arrow {
+  font-size: 11px;
+  color: #2164d8;
+}
+
 tr:hover td {
   background: #fbfdff;
 }

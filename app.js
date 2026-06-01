@@ -12,6 +12,7 @@ let isSaving = false;
 let isLoadingRows = false;
 let currentPage = 1;
 let rowsPerPage = 20;
+let sortDir = null; // null | 'asc' | 'desc'
 
 const els = {
   logoutBtn: document.getElementById('logoutBtn'),
@@ -152,7 +153,7 @@ function getFilteredRows() {
   const recebido = els.recebidoFilter?.value || '';
   const respondido = els.respondidoFilter?.value || '';
 
-  return allRows.filter(row => {
+  const filtered = allRows.filter(row => {
     const hay = [row.numero_oficio, row.observacoes, row.link_oficio].join(' ').toLowerCase();
     const matchesText = !q || hay.includes(q);
     const matchesStatus = !status || row.status_prazo_calculado === status;
@@ -160,7 +161,33 @@ function getFilteredRows() {
     const matchesRespondido = !respondido || normalizeText(row.respondido) === respondido;
     return matchesText && matchesStatus && matchesRecebido && matchesRespondido;
   });
+
+  if (sortDir) {
+    return [...filtered].sort((a, b) => compareNumero(a, b, sortDir));
+  }
+
+  return filtered;
 }
+
+function compareNumero(a, b, dir) {
+  const av = (a.numero_oficio || '').toString();
+  const bv = (b.numero_oficio || '').toString();
+  const cmp = av.localeCompare(bv, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  return dir === 'desc' ? -cmp : cmp;
+}
+
+function updateSortIndicator() {
+  const arrow = document.getElementById('sortNumeroArrow');
+  if (!arrow) return;
+  arrow.textContent = sortDir === 'asc' ? '▲' : sortDir === 'desc' ? '▼' : '';
+}
+
+window.toggleSortNumero = function () {
+  sortDir = sortDir === null ? 'asc' : sortDir === 'asc' ? 'desc' : null;
+  currentPage = 1;
+  updateSortIndicator();
+  render();
+};
 
 function getRowsForPdf() {
   const rows = getFilteredRows();
